@@ -1,0 +1,2464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>琢言 · 学术写作助手 — 产品原型 V2</title>
+<style>
+  :root {
+    /* 品牌色 - 墨翠绿+赭金,呼应"琢玉"的中式学术气质,区别于竞品的绿/蓝/紫 */
+    --brand: #0D7377;
+    --brand-dark: #0A5C5F;
+    --brand-light: #B8E6E6;
+    --brand-bg: #E8F5F5;
+    --accent: #C99A3E;
+    /* 语义色 - 借鉴Grammarly */
+    --grammar: #ef4444;      /* 语法错误-红 */
+    --grammar-bg: #fef2f2;
+    --clarity: #3b82f6;      /* 清晰度-蓝 */
+    --clarity-bg: #eff6ff;
+    --term: #8b5cf6;         /* 术语-紫 */
+    --term-bg: #f5f3ff;
+    --style: #f59e0b;        /* 风格-橙 */
+    --style-bg: #fffbeb;
+    --success: #10b981;
+    --success-bg: #ecfdf5;
+    --danger: #ef4444;
+    --danger-bg: #fef2f2;
+    --warning: #f59e0b;
+    --warning-bg: #fffbeb;
+    /* 中性色 */
+    --gray-50: #fafafa;
+    --gray-100: #f5f5f5;
+    --gray-150: #ededed;
+    --gray-200: #e5e5e5;
+    --gray-300: #d4d4d4;
+    --gray-400: #a3a3a3;
+    --gray-500: #737373;
+    --gray-600: #525252;
+    --gray-700: #404040;
+    --gray-800: #262626;
+    --gray-900: #171717;
+    /* 阴影 */
+    --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+    --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.04);
+    /* 圆角 */
+    --r-sm: 6px;
+    --r-md: 8px;
+    --r-lg: 12px;
+    --r-xl: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--gray-100);
+    color: var(--gray-800);
+    font-size: 14px;
+    line-height: 1.6;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============ 顶部导航 ============ */
+  .topbar {
+    height: 60px;
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 28px;
+    position: relative;
+    z-index: 50;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .logo-mark {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 18px; font-weight: 800;
+    box-shadow: 0 4px 12px rgba(13,115,119,0.3);
+  }
+  .logo-text { display: flex; flex-direction: column; line-height: 1.1; }
+  .logo-name { font-size: 18px; font-weight: 800; color: var(--gray-900); letter-spacing: -0.3px; }
+  .logo-tag { font-size: 10px; color: var(--gray-400); font-weight: 500; margin-top: 2px; }
+
+  .nav-tabs { display: flex; gap: 2px; flex: 1; margin-left: 12px; }
+  .nav-tab {
+    padding: 8px 14px;
+    border-radius: var(--r-md);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-500);
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    position: relative;
+  }
+  .nav-tab:hover { background: var(--gray-100); color: var(--gray-700); }
+  .nav-tab.active {
+    background: var(--brand-bg);
+    color: var(--brand-dark);
+    font-weight: 600;
+  }
+  .nav-tab .tab-icon { font-size: 15px; }
+
+  .topbar-actions { display: flex; align-items: center; gap: 12px; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--r-md);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--gray-500);
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .icon-btn:hover { background: var(--gray-100); color: var(--gray-700); }
+  .upgrade-btn {
+    padding: 7px 16px;
+    background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
+    color: #fff;
+    border: none;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(13,115,119,0.3);
+    transition: transform 0.15s;
+  }
+  .upgrade-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13,115,119,0.4); }
+  .avatar {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 13px;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ============ 主体布局 ============ */
+  .main { display: flex; height: calc(100vh - 60px); }
+
+  /* ============ 左侧文档栏 ============ */
+  .sidebar {
+    width: 280px;
+    background: #fff;
+    border-right: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-top {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .btn-new {
+    width: 100%;
+    padding: 10px;
+    background: var(--gray-900);
+    color: #fff;
+    border: none;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s;
+  }
+  .btn-new:hover { background: var(--gray-700); }
+  .sidebar-search {
+    margin: 12px 16px 8px;
+    padding: 8px 12px;
+    background: var(--gray-100);
+    border-radius: var(--r-md);
+    font-size: 13px;
+    color: var(--gray-400);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .sidebar-search:focus-within {
+    background: #fff;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px var(--brand-bg);
+  }
+  .sidebar-search input {
+    border: none; background: transparent; outline: none;
+    flex: 1; font-size: 13px; color: var(--gray-700);
+  }
+  .folder-section { padding: 8px 8px 4px 12px; }
+  .folder-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray-400);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 8px 4px;
+  }
+  .doc-list { flex: 1; overflow-y: auto; padding: 0 8px 12px; }
+  .doc-list::-webkit-scrollbar { width: 4px; }
+  .doc-list::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 2px; }
+  .doc-list::-webkit-scrollbar-thumb:hover { background: var(--gray-300); }
+  .doc-item {
+    padding: 9px 10px;
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    margin-bottom: 1px;
+    transition: all 0.12s;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .doc-item:hover { background: var(--gray-50); }
+  .doc-item.active { background: var(--brand-bg); }
+  .doc-icon {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .doc-icon.polish { background: var(--clarity-bg); color: var(--clarity); }
+  .doc-icon.logic { background: var(--style-bg); color: var(--style); }
+  .doc-icon.aigc { background: var(--danger-bg); color: var(--danger); }
+  .doc-info { flex: 1; min-width: 0; }
+  .doc-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-700);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+  }
+  .doc-item.active .doc-title { color: var(--brand-dark); font-weight: 600; }
+  .doc-meta { font-size: 11px; color: var(--gray-400); display: flex; gap: 6px; align-items: center; }
+  .doc-meta-dot { width: 3px; height: 3px; background: var(--gray-300); border-radius: 50%; }
+
+  .sidebar-bottom {
+    padding: 12px 16px;
+    border-top: 1px solid var(--gray-100);
+    background: var(--gray-50);
+  }
+  .quota-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--r-md);
+    padding: 10px 12px;
+  }
+  .quota-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .quota-label { font-size: 11px; color: var(--gray-500); font-weight: 600; }
+  .quota-value { font-size: 11px; color: var(--gray-700); font-weight: 700; }
+  .quota-bar {
+    height: 4px;
+    background: var(--gray-100);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .quota-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--success), var(--brand));
+    border-radius: 2px;
+    transition: width 0.4s;
+  }
+  .quota-hint { font-size: 10px; color: var(--gray-400); margin-top: 6px; }
+
+  /* ============ 内容区 ============ */
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--gray-100);
+  }
+  .view { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+  .view.active { display: flex; }
+
+  /* ============ 工作台 ============ */
+  .workspace { padding: 28px 36px; overflow-y: auto; flex: 1; }
+  .ws-hero {
+    background: linear-gradient(135deg, #0D7377 0%, #C99A3E 50%, #D4A24C 100%);
+    border-radius: var(--r-xl);
+    padding: 32px 36px;
+    color: #fff;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(13,115,119,0.25);
+  }
+  .ws-hero::before {
+    content: '';
+    position: absolute;
+    right: -60px; top: -60px;
+    width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .ws-hero::after {
+    content: '';
+    position: absolute;
+    right: 80px; bottom: -40px;
+    width: 160px; height: 160px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .ws-hero-content { position: relative; z-index: 1; }
+  .ws-greeting { font-size: 13px; opacity: 0.85; margin-bottom: 4px; font-weight: 500; }
+  .ws-hero h1 { font-size: 24px; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.3px; }
+  .ws-hero p { font-size: 13px; opacity: 0.9; }
+  .ws-hero-stats { display: flex; gap: 36px; margin-top: 24px; position: relative; z-index: 1; }
+  .ws-stat-num { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+  .ws-stat-label { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+
+  .ws-section { margin-bottom: 24px; }
+  .ws-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .ws-section-title { font-size: 15px; font-weight: 700; color: var(--gray-800); }
+  .ws-section-link { font-size: 12px; color: var(--brand); cursor: pointer; font-weight: 500; }
+  .ws-section-link:hover { text-decoration: underline; }
+
+  .ws-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .ws-card {
+    background: #fff;
+    border-radius: var(--r-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid var(--gray-200);
+    position: relative;
+    overflow: hidden;
+  }
+  .ws-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--brand);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s;
+  }
+  .ws-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    border-color: var(--brand-light);
+  }
+  .ws-card:hover::before { transform: scaleX(1); }
+  .ws-card-icon {
+    width: 44px; height: 44px;
+    border-radius: var(--r-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+  .ws-card-title { font-size: 15px; font-weight: 700; color: var(--gray-800); margin-bottom: 4px; }
+  .ws-card-desc { font-size: 12px; color: var(--gray-500); line-height: 1.6; }
+  .ws-card-arrow {
+    position: absolute;
+    right: 16px; bottom: 16px;
+    color: var(--gray-300);
+    transition: all 0.2s;
+  }
+  .ws-card:hover .ws-card-arrow { color: var(--brand); transform: translate(2px, -2px); }
+
+  .ws-recent {
+    background: #fff;
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-200);
+    overflow: hidden;
+  }
+  .ws-recent-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 18px;
+    cursor: pointer;
+    transition: background 0.12s;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .ws-recent-item:last-child { border-bottom: none; }
+  .ws-recent-item:hover { background: var(--gray-50); }
+  .ws-recent-icon {
+    width: 36px; height: 36px;
+    border-radius: var(--r-sm);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    margin-right: 14px;
+  }
+  .ws-recent-info { flex: 1; min-width: 0; }
+  .ws-recent-name { font-size: 13px; font-weight: 500; color: var(--gray-700); margin-bottom: 2px; }
+  .ws-recent-meta { font-size: 11px; color: var(--gray-400); }
+  .ws-recent-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-weight: 600;
+  }
+
+  /* ============ 编辑器布局 ============ */
+  .editor-layout { display: flex; flex: 1; overflow: hidden; }
+
+  .editor-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--gray-50);
+    overflow: hidden;
+  }
+  .editor-toolbar {
+    height: 48px;
+    padding: 0 24px;
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .toolbar-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-700);
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .toolbar-doc-name {
+    background: var(--gray-100);
+    padding: 4px 10px;
+    border-radius: var(--r-sm);
+    font-size: 12px;
+    color: var(--gray-600);
+    font-weight: 500;
+  }
+  .btn {
+    padding: 7px 14px;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--brand);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(13,115,119,0.3);
+  }
+  .btn-primary:hover { background: var(--brand-dark); box-shadow: 0 2px 6px rgba(13,115,119,0.4); }
+  .btn-primary:disabled { background: var(--gray-300); cursor: not-allowed; box-shadow: none; }
+  .btn-outline { background: #fff; color: var(--gray-600); border: 1px solid var(--gray-200); }
+  .btn-outline:hover { border-color: var(--brand); color: var(--brand); background: var(--brand-bg); }
+  .btn-ghost { background: transparent; color: var(--gray-500); }
+  .btn-ghost:hover { background: var(--gray-100); color: var(--gray-700); }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #059669; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* ============ 文档编辑区(类Notion/Paperpal) ============ */
+  .doc-editor {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 0;
+    display: flex;
+    justify-content: center;
+  }
+  .doc-editor::-webkit-scrollbar { width: 8px; }
+  .doc-editor::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+  .doc-page {
+    width: 100%;
+    max-width: 720px;
+    background: #fff;
+    margin: 0 24px;
+    padding: 48px 56px;
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-md);
+    min-height: calc(100vh - 200px);
+  }
+  .doc-page-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--gray-100);
+  }
+  .doc-page-content {
+    font-family: "PingFang SC", "Microsoft YaHei", Georgia, serif;
+    font-size: 15px;
+    line-height: 2.1;
+    color: var(--gray-800);
+  }
+  .doc-page-content p { margin-bottom: 16px; }
+  .doc-page-content .para { position: relative; padding: 2px 4px; border-radius: 3px; transition: background 0.2s; }
+
+  /* 行内高亮标记 - 借鉴Grammarly波浪线 */
+  mark.hl {
+    padding: 1px 2px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+    background: transparent;
+    border-bottom: 2px solid;
+  }
+  mark.hl:hover { background: rgba(0,0,0,0.03); }
+  mark.hl.grammar { border-color: var(--grammar); background: rgba(239,68,68,0.06); }
+  mark.hl.grammar:hover { background: rgba(239,68,68,0.12); }
+  mark.hl.clarity { border-color: var(--clarity); background: rgba(59,130,246,0.06); }
+  mark.hl.clarity:hover { background: rgba(59,130,246,0.12); }
+  mark.hl.term { border-color: var(--term); background: rgba(139,92,246,0.06); }
+  mark.hl.term:hover { background: rgba(139,92,246,0.12); }
+  mark.hl.style { border-color: var(--style); background: rgba(245,158,11,0.06); }
+  mark.hl.style:hover { background: rgba(245,158,11,0.12); }
+  mark.hl.accepted { border-color: var(--success); background: rgba(16,185,129,0.1); text-decoration: line-through; text-decoration-color: rgba(16,185,129,0.4); }
+  mark.hl.dismissed { opacity: 0.4; }
+  mark.hl.active { box-shadow: 0 0 0 2px var(--brand); }
+
+  /* 文本输入态 */
+  .doc-input {
+    width: 100%;
+    max-width: 720px;
+    background: #fff;
+    margin: 0 24px;
+    padding: 48px 56px;
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-md);
+    min-height: calc(100vh - 200px);
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: "PingFang SC", "Microsoft YaHei", Georgia, serif;
+    font-size: 15px;
+    line-height: 2.1;
+    color: var(--gray-800);
+  }
+  .doc-input::placeholder { color: var(--gray-300); }
+
+  .editor-statusbar {
+    height: 36px;
+    padding: 0 24px;
+    background: #fff;
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--gray-500);
+  }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+  .status-divider { color: var(--gray-300); }
+
+  /* ============ 右侧面板 ============ */
+  .panel-right {
+    width: 380px;
+    background: #fff;
+    border-left: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+  }
+  .panel-tab {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all 0.15s;
+    border-bottom: 2px solid transparent;
+  }
+  .panel-tab:hover { color: var(--gray-700); background: var(--gray-100); }
+  .panel-tab.active { color: var(--brand); border-bottom-color: var(--brand); background: #fff; font-weight: 600; }
+  .panel-tab .count {
+    display: inline-block;
+    background: var(--gray-200);
+    color: var(--gray-600);
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 4px;
+    font-weight: 700;
+  }
+  .panel-tab.active .count { background: var(--brand-bg); color: var(--brand); }
+
+  .panel-body { flex: 1; overflow-y: auto; }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 2px; }
+
+  /* ============ 评分卡(借鉴Paperpal/Grammarly) ============ */
+  .score-card {
+    padding: 20px;
+    background: linear-gradient(135deg, #fff 0%, var(--brand-bg) 100%);
+    border-bottom: 1px solid var(--gray-200);
+    text-align: center;
+  }
+  .score-ring-wrap {
+    width: 100px; height: 100px;
+    margin: 0 auto 12px;
+    position: relative;
+  }
+  .score-ring-svg { transform: rotate(-90deg); }
+  .score-ring-bg { fill: none; stroke: var(--gray-200); stroke-width: 8; }
+  .score-ring-fill {
+    fill: none;
+    stroke: url(#scoreGradient);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s ease;
+  }
+  .score-ring-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .score-ring-num { font-size: 26px; font-weight: 800; color: var(--gray-900); line-height: 1; }
+  .score-ring-label { font-size: 10px; color: var(--gray-500); margin-top: 2px; }
+  .score-card-title { font-size: 14px; font-weight: 700; color: var(--gray-800); margin-bottom: 4px; }
+  .score-card-desc { font-size: 12px; color: var(--gray-500); }
+
+  .score-breakdown {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .breakdown-item {
+    padding: 10px;
+    background: var(--gray-50);
+    border-radius: var(--r-sm);
+    text-align: center;
+  }
+  .breakdown-num { font-size: 18px; font-weight: 700; }
+  .breakdown-label { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+  .breakdown-num.grammar { color: var(--grammar); }
+  .breakdown-num.clarity { color: var(--clarity); }
+  .breakdown-num.term { color: var(--term); }
+  .breakdown-num.style { color: var(--style); }
+
+  /* ============ 建议卡片(借鉴Grammarly) ============ */
+  .suggestion-list { padding: 12px; }
+  .suggestion-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--r-md);
+    padding: 14px;
+    margin-bottom: 10px;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+  }
+  .suggestion-card:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--gray-300);
+  }
+  .suggestion-card.active { border-color: var(--brand); box-shadow: 0 0 0 2px var(--brand-bg); }
+  .suggestion-card.accepted { border-color: var(--success); background: var(--success-bg); }
+  .suggestion-card.accepted::before {
+    content: '✓';
+    position: absolute;
+    top: 12px; right: 12px;
+    width: 18px; height: 18px;
+    background: var(--success);
+    color: #fff;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .suggestion-card.dismissed { opacity: 0.5; }
+
+  .sg-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .sg-type-pill {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .sg-type-pill.grammar { background: var(--grammar-bg); color: var(--grammar); }
+  .sg-type-pill.clarity { background: var(--clarity-bg); color: var(--clarity); }
+  .sg-type-pill.term { background: var(--term-bg); color: var(--term); }
+  .sg-type-pill.style { background: var(--style-bg); color: var(--style); }
+  .sg-severity {
+    font-size: 10px;
+    color: var(--gray-400);
+    font-weight: 600;
+  }
+
+  .sg-diff {
+    background: var(--gray-50);
+    border-radius: var(--r-sm);
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    line-height: 1.8;
+    border-left: 3px solid var(--gray-200);
+  }
+  .sg-diff.grammar { border-left-color: var(--grammar); }
+  .sg-diff.clarity { border-left-color: var(--clarity); }
+  .sg-diff.term { border-left-color: var(--term); }
+  .sg-diff.style { border-left-color: var(--style); }
+  .sg-diff-old {
+    color: var(--gray-600);
+    text-decoration: line-through;
+    text-decoration-color: rgba(239,68,68,0.5);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .sg-diff-arrow { color: var(--gray-400); font-size: 11px; margin: 2px 0; }
+  .sg-diff-new {
+    color: var(--gray-800);
+    font-weight: 500;
+    background: var(--success-bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .sg-reason {
+    font-size: 12px;
+    color: var(--gray-500);
+    line-height: 1.6;
+    margin-bottom: 10px;
+    padding-left: 8px;
+    border-left: 2px solid var(--brand-light);
+  }
+  .sg-actions { display: flex; gap: 6px; }
+
+  /* ============ 空状态/加载 ============ */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--gray-400);
+    text-align: center;
+    padding: 40px 24px;
+  }
+  .empty-icon {
+    width: 64px; height: 64px;
+    background: var(--gray-100);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    margin-bottom: 16px;
+  }
+  .empty-title { font-size: 14px; font-weight: 600; color: var(--gray-500); margin-bottom: 6px; }
+  .empty-desc { font-size: 12px; color: var(--gray-400); max-width: 220px; line-height: 1.6; }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 16px;
+    padding: 40px;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--gray-200);
+    border-top-color: var(--brand);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--gray-500); text-align: center; }
+  .loading-steps { font-size: 11px; color: var(--gray-400); margin-top: 8px; }
+
+  /* ============ 逻辑结构图 ============ */
+  .logic-canvas {
+    padding: 16px;
+  }
+  .logic-tree { position: relative; }
+  .logic-node {
+    position: relative;
+    margin-bottom: 6px;
+  }
+  .logic-node-content {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--r-md);
+    padding: 10px 12px;
+    font-size: 12px;
+    transition: all 0.15s;
+    cursor: pointer;
+    position: relative;
+  }
+  .logic-node-content:hover { box-shadow: var(--shadow-sm); border-color: var(--gray-300); }
+  .logic-node-content.has-warning { border-left: 3px solid var(--danger); }
+  .logic-node-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+  .logic-node-type {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    font-weight: 700;
+  }
+  .ln-claim { background: var(--clarity-bg); color: var(--clarity); }
+  .ln-evidence { background: var(--success-bg); color: var(--success); }
+  .ln-conclusion { background: var(--style-bg); color: var(--style); }
+  .ln-transition { background: var(--term-bg); color: var(--term); }
+  .logic-node-level { font-size: 10px; color: var(--gray-400); font-weight: 600; }
+  .logic-node-text { color: var(--gray-700); line-height: 1.6; }
+  .logic-warning {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: var(--danger-bg);
+    border-radius: var(--r-sm);
+    font-size: 11px;
+    color: var(--danger);
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    line-height: 1.5;
+  }
+
+  .logic-summary-bar {
+    padding: 14px 16px;
+    background: linear-gradient(135deg, var(--brand-bg), #fff);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .logic-summary-title { font-size: 13px; font-weight: 700; color: var(--gray-800); margin-bottom: 8px; }
+  .logic-summary-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+  .logic-stat-pill {
+    padding: 4px 10px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 11px;
+    color: var(--gray-600);
+    font-weight: 500;
+  }
+  .logic-stat-pill strong { color: var(--gray-800); }
+
+  /* ============ AIGC报告 ============ */
+  .aigc-hero {
+    padding: 20px;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: #fff;
+    text-align: center;
+  }
+  .aigc-hero-ring {
+    width: 110px; height: 110px;
+    margin: 0 auto 12px;
+    position: relative;
+  }
+  .aigc-hero-num { font-size: 30px; font-weight: 800; line-height: 1; }
+  .aigc-hero-unit { font-size: 14px; opacity: 0.7; }
+  .aigc-hero-label { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+  .aigc-hero-status {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(239,68,68,0.2);
+    color: #fca5a5;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  .aigc-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--gray-200);
+    border-bottom: 1px solid var(--gray-200);
+  }
+  .aigc-stat-cell {
+    background: #fff;
+    padding: 12px;
+    text-align: center;
+  }
+  .aigc-stat-num { font-size: 18px; font-weight: 700; color: var(--gray-800); }
+  .aigc-stat-num.danger { color: var(--danger); }
+  .aigc-stat-num.warning { color: var(--warning); }
+  .aigc-stat-num.success { color: var(--success); }
+  .aigc-stat-label { font-size: 10px; color: var(--gray-500); margin-top: 2px; }
+
+  .aigc-para-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--r-md);
+    margin: 10px 12px;
+    overflow: hidden;
+    transition: all 0.15s;
+  }
+  .aigc-para-card:hover { box-shadow: var(--shadow-sm); }
+  .aigc-para-card.high-risk { border-color: var(--danger); border-left-width: 3px; }
+  .aigc-para-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-100);
+  }
+  .aigc-para-label { font-size: 11px; font-weight: 600; color: var(--gray-600); }
+  .aigc-para-bar-wrap { flex: 1; margin: 0 12px; height: 4px; background: var(--gray-200); border-radius: 2px; overflow: hidden; }
+  .aigc-para-bar { height: 100%; border-radius: 2px; }
+  .aigc-para-score {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .risk-low { background: var(--success-bg); color: var(--success); }
+  .risk-mid { background: var(--warning-bg); color: var(--warning); }
+  .risk-high { background: #ffe4e6; color: #be123c; }
+  .risk-extreme { background: var(--danger-bg); color: var(--danger); }
+  .aigc-para-body { padding: 10px 12px; font-size: 12px; color: var(--gray-600); line-height: 1.7; max-height: 80px; overflow: hidden; position: relative; }
+  .aigc-para-body::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 24px;
+    background: linear-gradient(transparent, #fff);
+  }
+  .aigc-para-actions { padding: 8px 12px; border-top: 1px solid var(--gray-100); }
+  .rewrite-result {
+    margin: 8px 12px 12px;
+    padding: 10px;
+    background: var(--success-bg);
+    border: 1px solid var(--success);
+    border-radius: var(--r-sm);
+    font-size: 12px;
+    display: none;
+    animation: slideDown 0.3s ease;
+  }
+  .rewrite-result.show { display: block; }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .rewrite-label { font-size: 10px; color: var(--success); font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+  .rewrite-text { color: var(--gray-700); line-height: 1.6; }
+  .rewrite-meta {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--success);
+    font-size: 10px;
+  }
+  .rewrite-meta-item { color: var(--gray-500); }
+  .rewrite-meta-item strong { color: var(--success); }
+
+  /* ============ Toast ============ */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toast {
+    background: var(--gray-900);
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    animation: slideIn 0.25s ease;
+    max-width: 320px;
+  }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+  @keyframes slideIn {
+    from { transform: translateX(120%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-brand { background: var(--brand-bg); color: var(--brand); }
+  .badge-success { background: var(--success-bg); color: var(--success); }
+  .badge-warning { background: var(--warning-bg); color: var(--warning); }
+  .badge-danger { background: var(--danger-bg); color: var(--danger); }
+
+  /* 滚动条全局 */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gray-300); }
+
+  /* 工具提示 - 向下显示,右对齐避免溢出视口 */
+  .tooltip { position: relative; }
+  .tooltip:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--gray-900);
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: var(--r-sm);
+    font-size: 11px;
+    white-space: nowrap;
+    margin-top: 6px;
+    z-index: 100;
+    box-shadow: var(--shadow-md);
+    pointer-events: none;
+  }
+  .tooltip:hover::before {
+    content: '';
+    position: absolute;
+    top: 100%;
+    right: 10px;
+    margin-top: 2px;
+    border: 4px solid transparent;
+    border-bottom-color: var(--gray-900);
+    z-index: 100;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<style>
+/* ============ 登录遮罩 ============ */
+.login-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15,23,42,0.6);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn .3s;
+}
+.login-overlay.hidden { display: none; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+.login-card {
+  width: 780px; max-width: 95vw;
+  background: #fff;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+  display: flex;
+  animation: cardUp .35s;
+}
+@keyframes cardUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+.login-brand {
+  flex: 0 0 340px;
+  background: linear-gradient(160deg, #0D7377 0%, #0A5C5F 40%, #C99A3E 100%);
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.login-brand::before {
+  content: '';
+  position: absolute;
+  right: -40px; bottom: -40px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.login-brand::after {
+  content: '';
+  position: absolute;
+  left: 30px; top: 30px;
+  width: 100px; height: 100px;
+  background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+}
+.login-brand-content {
+  position: relative; z-index: 1;
+  text-align: center; color: #fff;
+}
+.login-logo {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  margin-bottom: 16px;
+}
+.login-logo-mark {
+  width: 52px; height: 52px;
+  background: rgba(255,255,255,0.18);
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800;
+  backdrop-filter: blur(4px);
+}
+.login-logo-name { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+.login-brand-tagline { font-size: 14px; opacity: 0.9; margin-bottom: 6px; font-weight: 500; }
+.login-brand-desc { font-size: 12px; opacity: 0.7; line-height: 1.7; }
+.login-form {
+  flex: 1;
+  padding: 48px 40px;
+  display: flex; flex-direction: column; justify-content: center;
+}
+.login-form-title { font-size: 22px; font-weight: 700; color: var(--gray-900); margin-bottom: 4px; }
+.login-form-sub { font-size: 13px; color: var(--gray-500); margin-bottom: 28px; }
+.login-field {
+  display: flex; align-items: center;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-md);
+  padding: 0 14px;
+  margin-bottom: 14px;
+  transition: border-color .15s;
+}
+.login-field:focus-within { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-bg); }
+.login-field .icon { width: 18px; height: 18px; color: var(--gray-400); margin-right: 10px; flex-shrink: 0; }
+.login-field input {
+  flex: 1; border: none; background: transparent; outline: none;
+  padding: 12px 0; font-size: 14px; color: var(--gray-800);
+}
+.login-field input::placeholder { color: var(--gray-300); }
+.login-submit {
+  width: 100%; padding: 12px;
+  background: var(--brand);
+  color: #fff;
+  border: none; border-radius: var(--r-md);
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  margin: 4px 0 20px;
+  transition: background .15s;
+  letter-spacing: 4px;
+}
+.login-submit:hover { background: var(--brand-dark); }
+.login-divider {
+  text-align: center;
+  position: relative;
+  margin-bottom: 16px;
+}
+.login-divider::before {
+  content: ''; position: absolute; top: 50%; left: 0; right: 0;
+  height: 1px; background: var(--gray-200);
+}
+.login-divider span {
+  position: relative; background: #fff; padding: 0 14px;
+  font-size: 12px; color: var(--gray-400);
+}
+.login-social { display: flex; justify-content: center; gap: 14px; margin-bottom: 24px; }
+.social-btn {
+  width: 44px; height: 44px;
+  border: 1px solid var(--gray-200);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all .15s;
+  font-size: 12px; font-weight: 700; color: var(--gray-500);
+}
+.social-btn:hover { border-color: var(--brand); background: var(--brand-bg); }
+.login-footer { text-align: center; font-size: 13px; color: var(--gray-500); }
+.login-footer a { color: var(--brand); font-weight: 600; cursor: pointer; }
+
+/* ============ 登出下拉菜单 ============ */
+.user-menu-wrap { position: relative; }
+.user-menu {
+  position: absolute; top: 100%; right: 0;
+  margin-top: 8px;
+  width: 180px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 200;
+  display: none;
+}
+.user-menu.show { display: block; animation: slideDown .15s; }
+@keyframes slideDown { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+.user-menu-head {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--gray-100);
+  display: flex; align-items: center; gap: 10px;
+}
+.user-menu-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px; flex-shrink: 0;
+}
+.user-menu-name { font-size: 13px; font-weight: 600; color: var(--gray-800); }
+.user-menu-email { font-size: 11px; color: var(--gray-400); }
+.user-menu-items { padding: 6px; }
+.user-menu-item {
+  padding: 9px 12px; border-radius: var(--r-sm); cursor: pointer;
+  font-size: 13px; color: var(--gray-600); display: flex; align-items: center; gap: 8px;
+  transition: background .1s;
+}
+.user-menu-item:hover { background: var(--gray-50); }
+.user-menu-item.danger { color: var(--danger); }
+.user-menu-item.danger:hover { background: var(--danger-bg); }
+</style>
+
+<!-- ============ 登录遮罩 ============ -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="login-brand-content">
+        <div class="login-logo">
+          <div class="login-logo-mark">琢</div>
+          <div class="login-logo-name">琢言</div>
+        </div>
+        <div class="login-brand-tagline">中文+学术双核</div>
+        <div class="login-brand-desc">语言润色 · 逻辑优化 · AIGC合规<br>让每一篇论文更专业、更严谨、更原创</div>
+      </div>
+    </div>
+    <div class="login-form">
+      <div class="login-form-title">欢迎回来</div>
+      <div class="login-form-sub">登录你的琢言账号</div>
+      <div class="login-field">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        <input type="email" id="loginEmail" placeholder="邮箱地址" value="demo@zhuoyan.com" />
+      </div>
+      <div class="login-field">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="16" r="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <input type="password" id="loginPassword" placeholder="密码" value="demo123" />
+      </div>
+      <button class="login-submit" onclick="doLogin()">登 录</button>
+      <div class="login-divider"><span>或使用以下方式登录</span></div>
+      <div class="login-social">
+        <div class="social-btn" title="微信登录" onclick="showToast('微信登录（原型演示）','success')">W</div>
+        <div class="social-btn" title="QQ登录" onclick="showToast('QQ登录（原型演示）','success')">Q</div>
+        <div class="social-btn" title="Google登录" onclick="showToast('Google登录（原型演示）','success')">G</div>
+        <div class="social-btn" title="ORCID登录" onclick="showToast('ORCID登录（原型演示）','success')">O</div>
+      </div>
+      <div class="login-footer">还没有账号？<a href="#" onclick="event.preventDefault();showToast('跳转注册（原型演示）','success')">立即注册</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 顶部导航 ============ -->
+<div class="topbar">
+  <div class="logo" onclick="switchView('workspace')">
+    <div class="logo-mark">琢</div>
+    <div class="logo-text">
+      <div class="logo-name">琢言</div>
+      <div class="logo-tag">学术写作 · 润色 · 逻辑 · 合规</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-view="workspace" onclick="switchView('workspace')"><span class="tab-icon">🏠</span> 工作台</div>
+    <div class="nav-tab" data-view="polish" onclick="switchView('polish')"><span class="tab-icon">✍️</span> 学术润色</div>
+    <div class="nav-tab" data-view="logic" onclick="switchView('logic')"><span class="tab-icon">🧩</span> 逻辑优化</div>
+    <div class="nav-tab" data-view="aigc" onclick="switchView('aigc')"><span class="tab-icon">🛡️</span> AIGC检测</div>
+  </div>
+  <div class="topbar-actions">
+    <div class="icon-btn tooltip" data-tip="帮助文档" onclick="showToast('帮助中心（原型演示）')">?</div>
+    <div class="icon-btn tooltip" data-tip="通知" onclick="showToast('暂无新通知')">🔔</div>
+    <button class="upgrade-btn" onclick="showToast('已跳转订阅页（原型演示）', 'success')">⭐ 升级 Pro</button>
+    <div class="user-menu-wrap">
+      <div class="avatar" title="游晟泽" onclick="toggleUserMenu()">游</div>
+      <div class="user-menu" id="userMenu">
+        <div class="user-menu-head">
+          <div class="user-menu-avatar">游</div>
+          <div>
+            <div class="user-menu-name">游晟泽</div>
+            <div class="user-menu-email">demo@zhuoyan.com</div>
+          </div>
+        </div>
+        <div class="user-menu-items">
+          <div class="user-menu-item" onclick="showToast('个人中心（原型演示）')">👤 个人信息</div>
+          <div class="user-menu-item" onclick="showToast('设置（原型演示）')">⚙ 账户设置</div>
+          <div class="user-menu-item" onclick="showToast('订阅管理（原型演示）')">⭐ 订阅管理</div>
+          <div class="user-menu-item" onclick="showToast('帮助中心（原型演示）')">❓ 帮助与反馈</div>
+          <div class="user-menu-item danger" onclick="doLogout()">🚪 退出登录</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 主体 ============ -->
+<div class="main">
+
+  <!-- ============ 侧边栏 ============ -->
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <button class="btn-new" onclick="newDocument()">+ 新建文档</button>
+    </div>
+    <div class="sidebar-search">
+      <span>🔍</span>
+      <input type="text" placeholder="搜索文档..." />
+    </div>
+    <div class="folder-section">
+      <div class="folder-title">📁 我的文档</div>
+    </div>
+    <div class="doc-list" id="docList"></div>
+    <div class="sidebar-bottom">
+      <div class="quota-card">
+        <div class="quota-header">
+          <span class="quota-label">今日免费额度</span>
+          <span class="quota-value" id="quotaText">1,412 / 3,000</span>
+        </div>
+        <div class="quota-bar"><div class="quota-fill" id="quotaFill" style="width: 47%"></div></div>
+        <div class="quota-hint">💡 升级 Pro 解锁无限字数 + 降AI改写</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 内容区 ============ -->
+  <div class="content">
+
+    <!-- ========== 工作台 ========== -->
+    <div class="view active" id="view-workspace">
+      <div class="workspace">
+        <div class="ws-hero">
+          <div class="ws-hero-content">
+            <div class="ws-greeting">下午好，游晟泽 👋</div>
+            <h1>让每一篇论文更专业、更严谨、更原创</h1>
+            <p>中文+学术双核 · 语言润色 · 逻辑优化 · AIGC合规</p>
+            <div class="ws-hero-stats">
+              <div><div class="ws-stat-num">12</div><div class="ws-stat-label">已润色文档</div></div>
+              <div><div class="ws-stat-num">48,620</div><div class="ws-stat-label">累计字数</div></div>
+              <div><div class="ws-stat-num">847</div><div class="ws-stat-label">采纳建议</div></div>
+              <div><div class="ws-stat-num">68%</div><div class="ws-stat-label">采纳率</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ws-section">
+          <div class="ws-section-head">
+            <div class="ws-section-title">🚀 快速开始</div>
+          </div>
+          <div class="ws-cards">
+            <div class="ws-card" onclick="switchView('polish')">
+              <div class="ws-card-icon" style="background: var(--clarity-bg); color: var(--clarity);">✍️</div>
+              <div class="ws-card-title">学术语言润色</div>
+              <div class="ws-card-desc">中英双语法纠错、措辞精炼、术语统一，覆盖 50+ 学科</div>
+              <div class="ws-card-arrow">→</div>
+            </div>
+            <div class="ws-card" onclick="switchView('logic')">
+              <div class="ws-card-icon" style="background: var(--term-bg); color: var(--term);">🧩</div>
+              <div class="ws-card-title">逻辑优化</div>
+              <div class="ws-card-desc">论证层级梳理、段落衔接、逻辑断层标注、结构重组</div>
+              <div class="ws-card-arrow">→</div>
+            </div>
+            <div class="ws-card" onclick="switchView('aigc')">
+              <div class="ws-card-icon" style="background: var(--danger-bg); color: var(--danger);">🛡️</div>
+              <div class="ws-card-title">AIGC 检测与降AI</div>
+              <div class="ws-card-desc">段落级 AI 率检测、高亮标注、降AI改写闭环</div>
+              <div class="ws-card-arrow">→</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ws-section">
+          <div class="ws-section-head">
+            <div class="ws-section-title">📋 最近文档</div>
+            <div class="ws-section-link" onclick="showToast('查看全部（原型演示）')">查看全部 →</div>
+          </div>
+          <div class="ws-recent" id="wsRecent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 学术润色 ========== -->
+    <div class="view" id="view-polish">
+      <div class="editor-layout">
+        <div class="editor-center">
+          <div class="editor-toolbar">
+            <span class="toolbar-title">
+              ✍️ 学术润色
+              <span class="toolbar-doc-name">未命名文档</span>
+            </span>
+            <button class="btn btn-outline btn-sm" onclick="loadSamplePolish()">📥 载入示例</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearPolish()">清空</button>
+            <button class="btn btn-primary btn-sm" id="btnStartPolish" onclick="startPolish()">✨ 开始润色</button>
+          </div>
+          <div class="doc-editor" id="polishEditor">
+            <textarea class="doc-input" id="polishInput" placeholder="在此粘贴或输入你的学术论文文本...
+
+支持中英文混排，系统将自动识别：
+• 语法错误（搭配不当、成分残缺、句式杂糅）
+• 措辞问题（口语化、冗余、模糊表达）
+• 术语不一致（同一概念多种表述）
+• 句式优化（长句拆分、被动改主动）
+
+每日免费额度：3,000 字"></textarea>
+          </div>
+          <div class="editor-statusbar">
+            <span class="status-dot"></span>
+            <span id="polishWordCount">0 字</span>
+            <span class="status-divider">|</span>
+            <span>响应 ≤ 3s / 5000字</span>
+            <span class="status-divider">|</span>
+            <span>术语库 50+ 学科</span>
+            <span class="status-divider">|</span>
+            <span style="color: var(--success);">● 在线</span>
+          </div>
+        </div>
+        <div class="panel-right">
+          <div class="panel-tabs">
+            <div class="panel-tab active" data-panel="suggestions" onclick="switchPanel('polish', 'suggestions')">建议<span class="count" id="polishCount">0</span></div>
+            <div class="panel-tab" data-panel="summary" onclick="switchPanel('polish', 'summary')">概览</div>
+          </div>
+          <div class="panel-body" id="polishPanel">
+            <div class="empty-state">
+              <div class="empty-icon">📝</div>
+              <div class="empty-title">等待润色</div>
+              <div class="empty-desc">输入文本并点击「开始润色」，系统将逐条给出修改建议</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 逻辑优化 ========== -->
+    <div class="view" id="view-logic">
+      <div class="editor-layout">
+        <div class="editor-center">
+          <div class="editor-toolbar">
+            <span class="toolbar-title">
+              🧩 逻辑优化
+              <span class="toolbar-doc-name">论证结构分析</span>
+            </span>
+            <button class="btn btn-outline btn-sm" onclick="loadSampleLogic()">📥 载入示例</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearLogic()">清空</button>
+            <button class="btn btn-primary btn-sm" id="btnStartLogic" onclick="startLogic()">🔍 分析逻辑</button>
+          </div>
+          <div class="doc-editor">
+            <textarea class="doc-input" id="logicInput" placeholder="在此粘贴论文正文，系统将自动识别论证结构...
+
+适用文体：
+• 学位论文（绪论/正文/结论）
+• 期刊投稿（IMRaD 结构）
+• 课题申报书（研究方案论证）
+• 文献综述（研究脉络梳理）
+
+系统将识别：论点 / 论据 / 结论的层级关系，标注逻辑断层与衔接薄弱处。"></textarea>
+          </div>
+          <div class="editor-statusbar">
+            <span class="status-dot"></span>
+            <span id="logicWordCount">0 字</span>
+            <span class="status-divider">|</span>
+            <span>仅支持论证类文体</span>
+            <span class="status-divider">|</span>
+            <span>识别准确率 ≥ 85%</span>
+            <span class="status-divider">|</span>
+            <span style="color: var(--success);">● 在线</span>
+          </div>
+        </div>
+        <div class="panel-right">
+          <div class="panel-tabs">
+            <div class="panel-tab active" data-panel="structure" onclick="switchPanel('logic', 'structure')">结构图</div>
+            <div class="panel-tab" data-panel="issues" onclick="switchPanel('logic', 'issues')">问题<span class="count" id="logicCount">0</span></div>
+          </div>
+          <div class="panel-body" id="logicPanel">
+            <div class="empty-state">
+              <div class="empty-icon">🧩</div>
+              <div class="empty-title">等待分析</div>
+              <div class="empty-desc">粘贴论文文本并点击「分析逻辑」，查看论证层级与断层标注</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== AIGC检测 ========== -->
+    <div class="view" id="view-aigc">
+      <div class="editor-layout">
+        <div class="editor-center">
+          <div class="editor-toolbar">
+            <span class="toolbar-title">
+              🛡️ AIGC 检测
+              <span class="toolbar-doc-name">AI率扫描</span>
+            </span>
+            <button class="btn btn-outline btn-sm" onclick="loadSampleAIGC()">📥 载入示例</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearAIGC()">清空</button>
+            <button class="btn btn-primary btn-sm" id="btnStartAIGC" onclick="startAIGC()">🔬 开始检测</button>
+          </div>
+          <div class="doc-editor" id="aigcEditor">
+            <div class="doc-page">
+              <div class="doc-page-title">等待检测的文档</div>
+              <div class="doc-page-content" style="color: var(--gray-400); text-align: center; padding: 60px 0;">
+                <div style="font-size: 48px; margin-bottom: 16px;">🛡️</div>
+                <div style="font-size: 15px; font-weight: 600; color: var(--gray-500); margin-bottom: 8px;">粘贴文本以开始检测</div>
+                <div style="font-size: 13px;">系统将逐段输出 AI 生成概率，并高亮风险段落</div>
+              </div>
+            </div>
+          </div>
+          <div class="editor-statusbar">
+            <span class="status-dot"></span>
+            <span id="aigcWordCount">0 字</span>
+            <span class="status-divider">|</span>
+            <span>检测准确率 ≥ 90%</span>
+            <span class="status-divider">|</span>
+            <span>免费版每月 5 次降AI改写</span>
+            <span class="status-divider">|</span>
+            <span style="color: var(--success);">● 在线</span>
+          </div>
+        </div>
+        <div class="panel-right">
+          <div class="panel-tabs">
+            <div class="panel-tab active" data-panel="report" onclick="switchPanel('aigc', 'report')">报告</div>
+            <div class="panel-tab" data-panel="paragraphs" onclick="switchPanel('aigc', 'paragraphs')">段落<span class="count" id="aigcCount">0</span></div>
+          </div>
+          <div class="panel-body" id="aigcPanel">
+            <div class="empty-state">
+              <div class="empty-icon">📊</div>
+              <div class="empty-title">暂无检测报告</div>
+              <div class="empty-desc">开始检测后，此处将展示段落级 AI 率评分与风险标注</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ============================================================
+// 数据
+// ============================================================
+const documents = [
+  { id: 1, title: '毕业论文_第三章_实验设计', date: '今天', words: 8520, type: 'polish', status: '已完成' },
+  { id: 2, title: '期刊投稿_深度学习图像识别', date: '昨天', words: 6230, type: 'polish', status: '已完成' },
+  { id: 3, title: '课题申报_国家自然科学基金', date: '2天前', words: 12400, type: 'logic', status: '已完成' },
+  { id: 4, title: '英文摘要_SCI投稿', date: '3天前', words: 380, type: 'polish', status: '已完成' },
+  { id: 5, title: '文献综述_机器学习医疗应用', date: '5天前', words: 9800, type: 'aigc', status: '已完成' },
+  { id: 6, title: '开题报告_研究生学位论文', date: '1周前', words: 5600, type: 'polish', status: '草稿' },
+  { id: 7, title: '课程论文_分布式系统', date: '2周前', words: 4200, type: 'aigc', status: '已完成' },
+];
+
+const typeIcons = { polish: '✍️', logic: '🧩', aigc: '🛡️' };
+const typeLabels = { polish: '润色', logic: '逻辑', aigc: 'AIGC' };
+
+const samplePolishText = `通过对于该问题的深入研究，从而可以使得我们更好地理解深度学习模型的工作原理。在本文中，我们对于卷积神经网络在图像识别领域的应用进行了研究，并且得出了以下结论。
+
+首先，CNN模型在ImageNet数据集上的准确率达到了95.6%，这个结果比传统方法好了很多。其次，我们发现使用残差连接可以使得训练更加稳定，从而可以使得模型的性能进一步提升。
+
+另外，ML和机器学习这两个术语在本文中被交替使用。人工神经网络和神经网络也指代相同的概念。
+
+总的来说，通过本研究的实验，我们可以看出深度学习在计算机视觉领域有着很大的潜力，未来可能会有更多的应用场景。`;
+
+// 润色建议(含位置标记,用于行内高亮)
+const polishSuggestions = [
+  {
+    id: 's1', type: 'grammar', typeName: '语法', severity: '高',
+    old: '通过对于该问题的深入研究，从而可以使得我们更好地理解',
+    new: '通过深入研究该问题，我们可以更好地理解',
+    reason: '「通过对于…从而可以使得」为冗余句式，学术写作中应避免介词嵌套和多重使役结构。',
+    anchor: '通过对于该问题的深入研究，从而可以使得我们更好地理解'
+  },
+  {
+    id: 's2', type: 'clarity', typeName: '清晰度', severity: '中',
+    old: '对于卷积神经网络在图像识别领域的应用进行了研究',
+    new: '系统研究了卷积神经网络在图像识别领域的应用',
+    reason: '「对于…进行了研究」为口语化表达，学术写作推荐使用「系统研究了…」更简洁正式。',
+    anchor: '我们对于卷积神经网络在图像识别领域的应用进行了研究'
+  },
+  {
+    id: 's3', type: 'clarity', typeName: '清晰度', severity: '中',
+    old: '这个结果比传统方法好了很多',
+    new: '该结果显著优于传统方法',
+    reason: '「好了很多」过于口语化，学术写作应使用「显著优于」「大幅超越」等精确表述。',
+    anchor: '这个结果比传统方法好了很多'
+  },
+  {
+    id: 's4', type: 'style', typeName: '风格', severity: '低',
+    old: '可以使得模型的性能进一步提升',
+    new: '可进一步提升模型性能',
+    reason: '「可以使得…进一步提升」冗余，「使得」可省略，直接用「可进一步提升」更简洁。',
+    anchor: '从而可以使得模型的性能进一步提升'
+  },
+  {
+    id: 's5', type: 'term', typeName: '术语', severity: '高',
+    old: 'ML和机器学习这两个术语在本文中被交替使用',
+    new: '建议全文统一使用「机器学习」',
+    reason: '同一概念使用多种表述（ML / 机器学习）会造成读者混淆。建议全文统一为中文全称「机器学习」，首次出现时标注英文缩写。',
+    anchor: 'ML和机器学习这两个术语在本文中被交替使用'
+  },
+  {
+    id: 's6', type: 'term', typeName: '术语', severity: '高',
+    old: '人工神经网络和神经网络也指代相同的概念',
+    new: '建议全文统一使用「神经网络」',
+    reason: '「人工神经网络」与「神经网络」指代相同概念，建议统一为更常用的「神经网络」。',
+    anchor: '人工神经网络和神经网络也指代相同的概念'
+  },
+  {
+    id: 's7', type: 'style', typeName: '风格', severity: '中',
+    old: '总的来说，通过本研究的实验，我们可以看出深度学习在计算机视觉领域有着很大的潜力，未来可能会有更多的应用场景。',
+    new: '综上所述，本研究的实验表明深度学习在计算机视觉领域具有巨大潜力，未来应用前景广阔。',
+    reason: '「总的来说…我们可以看出…有着很大的…可能会有」为口语化长句，学术结论应使用「综上所述…研究表明…前景广阔」等正式表述。',
+    anchor: '总的来说，通过本研究的实验，我们可以看出深度学习在计算机视觉领域有着很大的潜力，未来可能会有更多的应用场景。'
+  },
+];
+
+// 逻辑结构
+const logicNodes = [
+  { id: 'n1', type: 'claim', typeName: '论点', text: '本文研究深度学习在医学图像诊断中的应用', level: 1, warning: null },
+  { id: 'n2', type: 'evidence', typeName: '论据', text: 'CNN在ImageNet数据集上准确率达95.6%', level: 2, warning: null },
+  { id: 'n3', type: 'evidence', typeName: '论据', text: '残差连接显著提升了模型训练稳定性', level: 2, warning: null },
+  { id: 'n4', type: 'conclusion', typeName: '结论', text: '深度学习在医学影像分析中具有巨大潜力', level: 2, warning: null },
+  { id: 'n5', type: 'claim', typeName: '论点', text: '医学影像数据量大、标注成本高', level: 1, warning: null },
+  { id: 'n6', type: 'evidence', typeName: '论据', text: '迁移学习可有效缓解小样本问题', level: 2, warning: null },
+  { id: 'n7', type: 'evidence', typeName: '论据', text: '预训练模型微调后准确率提升12%', level: 2, warning: null },
+  { id: 'n8', type: 'evidence', typeName: '论据', text: '当前方法在罕见病变识别上仍有不足', level: 2, warning: '逻辑断层：此论据与上文「巨大潜力」衔接较弱，缺少转折过渡句，读者难以理解从「潜力」到「不足」的逻辑跳跃。' },
+  { id: 'n9', type: 'claim', typeName: '论点', text: '本研究提出基于注意力机制的改进方案', level: 1, warning: null },
+  { id: 'n10', type: 'evidence', typeName: '论据', text: '实验验证：3类罕见病变F1提升8.3%', level: 2, warning: null },
+  { id: 'n11', type: 'conclusion', typeName: '结论', text: '注意力机制有效提升了模型特征提取能力', level: 2, warning: '段落衔接：此处缺少与前文「不足」的呼应，建议补充「针对上述不足，本文…」过渡句，使论证链条完整。' },
+];
+
+// AIGC段落
+const sampleAIGCText = [
+  { text: '随着人工智能技术的快速发展，深度学习在各个领域取得了显著的成果。特别是在计算机视觉、自然语言处理和语音识别等方面，深度学习模型已经达到了甚至超越了人类的表现水平。', aiRate: 0.82 },
+  { text: '本文基于ResNet-50网络结构，在ImageNet数据集上进行了实验。实验结果表明，模型在测试集上的Top-1准确率达到95.6%，较基线方法提升了3.2个百分点。', aiRate: 0.68 },
+  { text: '这个结果其实挺不错的，比我们预期的要好。我觉得主要原因是加了残差连接以后梯度能更好地传播。', aiRate: 0.15 },
+  { text: '综上所述，深度学习技术在医学图像分析领域展现出了巨大的应用潜力和广阔的发展前景。未来，随着算法的不断优化和计算能力的持续提升，该技术有望在临床诊断中发挥更加重要的作用。', aiRate: 0.91 },
+  { text: '实验中我们还发现，当学习率设置为0.001时，模型收敛速度最快。batch size为64时GPU利用率最高。', aiRate: 0.45 },
+];
+
+const aigcRewrites = {
+  0: '近年来，人工智能技术发展迅猛，深度学习在多个领域取得了突破性进展。尤其在计算机视觉、自然语言处理及语音识别等方向，深度学习模型性能已接近或超越人类水平。',
+  1: '本研究采用ResNet-50网络结构，基于ImageNet数据集开展实验。结果显示，模型在测试集上的Top-1准确率达95.6%，相较基线方法提升3.2个百分点。',
+  3: '综合以上分析，深度学习技术在医学图像分析领域展现出显著的应用价值和广阔的发展前景。随着算法的持续优化与算力的不断提升，该技术有望在临床辅助诊断中发挥更大作用。',
+};
+
+// ============================================================
+// 视图切换
+// ============================================================
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelector(`.nav-tab[data-view="${view}"]`).classList.add('active');
+}
+
+function switchPanel(view, panel) {
+  document.querySelectorAll(`#view-${view} .panel-tab`).forEach(t => t.classList.remove('active'));
+  document.querySelector(`#view-${view} .panel-tab[data-panel="${panel}"]`).classList.add('active');
+  // 重新渲染对应面板
+  if (view === 'polish') {
+    if (panel === 'suggestions') renderPolishSuggestions();
+    else renderPolishSummary();
+  } else if (view === 'logic') {
+    if (panel === 'structure') renderLogicStructure();
+    else renderLogicIssues();
+  } else if (view === 'aigc') {
+    if (panel === 'report') renderAIGCReport();
+    else renderAIGCParagraphs();
+  }
+}
+
+// ============================================================
+// 文档列表
+// ============================================================
+function renderDocList() {
+  const list = document.getElementById('docList');
+  list.innerHTML = documents.map(doc => `
+    <div class="doc-item ${doc.id === 1 ? 'active' : ''}" onclick="selectDoc(${doc.id}, '${doc.type}')">
+      <div class="doc-icon ${doc.type}">${typeIcons[doc.type]}</div>
+      <div class="doc-info">
+        <div class="doc-title">${doc.title}</div>
+        <div class="doc-meta">
+          <span>${doc.date}</span>
+          <span class="doc-meta-dot"></span>
+          <span>${doc.words.toLocaleString()}字</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderWsRecent() {
+  const list = document.getElementById('wsRecent');
+  list.innerHTML = documents.slice(0, 5).map(doc => `
+    <div class="ws-recent-item" onclick="selectDoc(${doc.id}, '${doc.type}')">
+      <div class="ws-recent-icon" style="background: var(--${doc.type === 'polish' ? 'clarity' : doc.type === 'logic' ? 'term' : 'danger'}-bg); color: var(--${doc.type === 'polish' ? 'clarity' : doc.type === 'logic' ? 'term' : 'danger'});">${typeIcons[doc.type]}</div>
+      <div class="ws-recent-info">
+        <div class="ws-recent-name">${doc.title}</div>
+        <div class="ws-recent-meta">${doc.date} · ${doc.words.toLocaleString()}字 · ${typeLabels[doc.type]}</div>
+      </div>
+      <span class="ws-recent-badge ${doc.status === '已完成' ? 'badge-success' : 'badge-warning'}">${doc.status}</span>
+    </div>
+  `).join('');
+}
+
+function selectDoc(id, type) {
+  document.querySelectorAll('.doc-item').forEach(el => el.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  const viewMap = { polish: 'polish', logic: 'logic', aigc: 'aigc' };
+  switchView(viewMap[type]);
+  showToast(`已打开文档（原型演示）`, 'success');
+}
+
+function newDocument() {
+  showToast('已创建新文档（原型演示）', 'success');
+}
+
+// ============================================================
+// 字数统计
+// ============================================================
+function updateWordCount(textareaId, counterId) {
+  const ta = document.getElementById(textareaId);
+  const counter = document.getElementById(counterId);
+  const count = ta.value.length;
+  counter.textContent = `${count.toLocaleString()} 字`;
+  const totalUsed = 1412 + count;
+  const percent = Math.min(100, (totalUsed / 3000) * 100);
+  document.getElementById('quotaFill').style.width = percent + '%';
+  document.getElementById('quotaText').textContent = `${totalUsed.toLocaleString()} / 3,000`;
+}
+
+// ============================================================
+// 学术润色
+// ============================================================
+let currentPolishSuggestions = [];
+
+function loadSamplePolish() {
+  document.getElementById('polishInput').value = samplePolishText;
+  updateWordCount('polishInput', 'polishWordCount');
+  showToast('已载入示例文本', 'success');
+}
+
+function clearPolish() {
+  document.getElementById('polishInput').value = '';
+  updateWordCount('polishInput', 'polishWordCount');
+  currentPolishSuggestions = [];
+  renderPolishEmpty();
+}
+
+function startPolish() {
+  const text = document.getElementById('polishInput').value.trim();
+  if (!text) { showToast('请先输入文本', 'error'); return; }
+  if (text.length < 20) { showToast('文本过短，请输入至少20字', 'error'); return; }
+
+  const panel = document.getElementById('polishPanel');
+  panel.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <div class="loading-text">正在分析文本...</div>
+      <div class="loading-steps">识别语法错误 · 检测措辞问题 · 校验术语一致性</div>
+    </div>
+  `;
+  const btn = document.getElementById('btnStartPolish');
+  btn.disabled = true; btn.textContent = '润色中...';
+
+  setTimeout(() => {
+    currentPolishSuggestions = [...polishSuggestions];
+    renderPolishDocWithHighlights();
+    renderPolishSuggestions();
+    document.getElementById('polishCount').textContent = currentPolishSuggestions.length;
+    btn.disabled = false; btn.textContent = '✨ 开始润色';
+    showToast(`润色完成，发现 ${currentPolishSuggestions.length} 条建议`, 'success');
+  }, 1800);
+}
+
+// 在文档中渲染高亮标记(借鉴Grammarly)
+function renderPolishDocWithHighlights() {
+  const editor = document.getElementById('polishEditor');
+  const text = document.getElementById('polishInput').value;
+
+  let html = text.split('\n\n').map((para, idx) => {
+    let processed = para;
+    // 按建议顺序处理,从后往前替换避免位置冲突
+    const paraSuggestions = currentPolishSuggestions.filter(s => para.includes(s.anchor));
+    paraSuggestions.forEach((s, i) => {
+      const escaped = s.anchor.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escaped, 'g');
+      processed = processed.replace(regex, (match) => {
+        return `<mark class="hl ${s.type}" data-sid="${s.id}" onclick="scrollToSuggestion('${s.id}')">${match}</mark>`;
+      });
+    });
+    return `<p>${processed}</p>`;
+  }).join('');
+
+  editor.innerHTML = `<div class="doc-page"><div class="doc-page-title">学术写作样本</div><div class="doc-page-content">${html}</div></div>`;
+}
+
+function renderPolishEmpty() {
+  document.getElementById('polishPanel').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">📝</div>
+      <div class="empty-title">等待润色</div>
+      <div class="empty-desc">输入文本并点击「开始润色」，系统将逐条给出修改建议</div>
+    </div>
+  `;
+  document.getElementById('polishCount').textContent = '0';
+  // 还原输入框
+  document.getElementById('polishEditor').innerHTML = `<textarea class="doc-input" id="polishInput" placeholder="在此粘贴或输入你的学术论文文本..."></textarea>`;
+  document.getElementById('polishInput').addEventListener('input', () => updateWordCount('polishInput', 'polishWordCount'));
+}
+
+function renderPolishSuggestions() {
+  const panel = document.getElementById('polishPanel');
+  if (currentPolishSuggestions.length === 0) {
+    renderPolishEmpty();
+    return;
+  }
+  const typeClass = { grammar: 'grammar', clarity: 'clarity', term: 'term', style: 'style' };
+  panel.innerHTML = `<div class="suggestion-list">` + currentPolishSuggestions.map(s => {
+    const status = document.querySelector(`mark.hl[data-sid="${s.id}"]`);
+    const isAccepted = status && status.classList.contains('accepted');
+    const isDismissed = status && status.classList.contains('dismissed');
+    return `
+      <div class="suggestion-card ${isAccepted ? 'accepted' : ''} ${isDismissed ? 'dismissed' : ''}" id="card-${s.id}" onclick="scrollToHighlight('${s.id}')">
+        <div class="sg-header">
+          <span class="sg-type-pill ${typeClass[s.type]}">${s.typeName}</span>
+          <span class="sg-severity">${s.severity}优先级</span>
+        </div>
+        <div class="sg-diff ${typeClass[s.type]}">
+          <span class="sg-diff-old">${s.old}</span>
+          <div class="sg-diff-arrow">↓ 建议改为</div>
+          <span class="sg-diff-new">${s.new}</span>
+        </div>
+        <div class="sg-reason">💡 ${s.reason}</div>
+        <div class="sg-actions">
+          <button class="btn btn-success btn-sm" onclick="event.stopPropagation();acceptSuggestion('${s.id}')">✓ 接受</button>
+          <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();dismissSuggestion('${s.id}')">忽略</button>
+        </div>
+      </div>
+    `;
+  }).join('') + `</div>`;
+}
+
+function renderPolishSummary() {
+  const panel = document.getElementById('polishPanel');
+  const total = currentPolishSuggestions.length;
+  const grammar = currentPolishSuggestions.filter(s => s.type === 'grammar').length;
+  const clarity = currentPolishSuggestions.filter(s => s.type === 'clarity').length;
+  const term = currentPolishSuggestions.filter(s => s.type === 'term').length;
+  const style = currentPolishSuggestions.filter(s => s.type === 'style').length;
+  const score = Math.max(60, 100 - total * 5);
+
+  panel.innerHTML = `
+    <div class="score-card">
+      <div class="score-ring-wrap">
+        <svg class="score-ring-svg" width="100" height="100">
+          <defs>
+            <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0D7377"/>
+              <stop offset="100%" stop-color="#C99A3E"/>
+            </linearGradient>
+          </defs>
+          <circle class="score-ring-bg" cx="50" cy="50" r="42"/>
+          <circle class="score-ring-fill" cx="50" cy="50" r="42"
+            stroke-dasharray="${2 * Math.PI * 42}"
+            stroke-dashoffset="${2 * Math.PI * 42 * (1 - score / 100)}"/>
+        </svg>
+        <div class="score-ring-text">
+          <div class="score-ring-num">${score}</div>
+          <div class="score-ring-label">写作得分</div>
+        </div>
+      </div>
+      <div class="score-card-title">${score >= 85 ? '优秀' : score >= 70 ? '良好' : '需改进'}</div>
+      <div class="score-card-desc">共发现 ${total} 处可优化点</div>
+    </div>
+    <div class="score-breakdown">
+      <div class="breakdown-item">
+        <div class="breakdown-num grammar">${grammar}</div>
+        <div class="breakdown-label">语法错误</div>
+      </div>
+      <div class="breakdown-item">
+        <div class="breakdown-num clarity">${clarity}</div>
+        <div class="breakdown-label">清晰度</div>
+      </div>
+      <div class="breakdown-item">
+        <div class="breakdown-num term">${term}</div>
+        <div class="breakdown-label">术语统一</div>
+      </div>
+      <div class="breakdown-item">
+        <div class="breakdown-num style">${style}</div>
+        <div class="breakdown-label">写作风格</div>
+      </div>
+    </div>
+    <div style="padding: 16px 20px;">
+      <div style="font-size:12px;color:var(--gray-500);line-height:1.7;">
+        💡 <strong style="color:var(--gray-700);">改进建议</strong><br>
+        ${grammar > 0 ? '• 优先处理语法错误，影响基础可读性<br>' : ''}
+        ${term > 0 ? '• 术语不统一会影响学术严谨性，建议全文统一<br>' : ''}
+        ${style > 0 ? '• 风格问题可后续优化，提升表达专业度<br>' : ''}
+        ${clarity > 0 ? '• 清晰度问题建议逐条审阅<br>' : ''}
+      </div>
+    </div>
+  `;
+}
+
+function scrollToSuggestion(id) {
+  const card = document.getElementById('card-' + id);
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('active');
+    setTimeout(() => card.classList.remove('active'), 2000);
+  }
+}
+
+function scrollToHighlight(id) {
+  const mark = document.querySelector(`mark.hl[data-sid="${id}"]`);
+  if (mark) {
+    mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    document.querySelectorAll('mark.hl').forEach(m => m.classList.remove('active'));
+    mark.classList.add('active');
+    setTimeout(() => mark.classList.remove('active'), 2000);
+  }
+}
+
+function acceptSuggestion(id) {
+  const mark = document.querySelector(`mark.hl[data-sid="${id}"]`);
+  if (mark) mark.classList.add('accepted');
+  const card = document.getElementById('card-' + id);
+  if (card) card.classList.add('accepted');
+  showToast('建议已采纳', 'success');
+  updatePolishCount();
+}
+
+function dismissSuggestion(id) {
+  const mark = document.querySelector(`mark.hl[data-sid="${id}"]`);
+  if (mark) mark.classList.add('dismissed');
+  const card = document.getElementById('card-' + id);
+  if (card) card.classList.add('dismissed');
+  updatePolishCount();
+}
+
+function updatePolishCount() {
+  const remaining = currentPolishSuggestions.filter(s => {
+    const mark = document.querySelector(`mark.hl[data-sid="${s.id}"]`);
+    return !mark || (!mark.classList.contains('accepted') && !mark.classList.contains('dismissed'));
+  }).length;
+  document.getElementById('polishCount').textContent = remaining;
+}
+
+// ============================================================
+// 逻辑优化
+// ============================================================
+let currentLogicNodes = [];
+
+function loadSampleLogic() {
+  document.getElementById('logicInput').value = `本文研究深度学习在医学图像诊断中的应用。卷积神经网络在ImageNet数据集上准确率达95.6%。残差连接显著提升了模型训练稳定性。因此，深度学习在医学影像分析中具有巨大潜力。
+
+医学影像数据量大、标注成本高。迁移学习可有效缓解小样本问题。预训练模型在医学数据上微调后准确率提升12%。然而，当前方法在罕见病变识别上仍有不足。
+
+本研究提出了基于注意力机制的改进方案。实验验证该方法在3类罕见病变上F1提升8.3%。说明注意力机制有效提升了模型的特征提取能力。`;
+  updateWordCount('logicInput', 'logicWordCount');
+  showToast('已载入示例文本', 'success');
+}
+
+function clearLogic() {
+  document.getElementById('logicInput').value = '';
+  updateWordCount('logicInput', 'logicWordCount');
+  currentLogicNodes = [];
+  renderLogicEmpty();
+}
+
+function renderLogicEmpty() {
+  document.getElementById('logicPanel').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">🧩</div>
+      <div class="empty-title">等待分析</div>
+      <div class="empty-desc">粘贴论文文本并点击「分析逻辑」，查看论证层级与断层标注</div>
+    </div>
+  `;
+  document.getElementById('logicCount').textContent = '0';
+}
+
+function startLogic() {
+  const text = document.getElementById('logicInput').value.trim();
+  if (!text) { showToast('请先输入文本', 'error'); return; }
+
+  const panel = document.getElementById('logicPanel');
+  panel.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <div class="loading-text">正在识别论证结构...</div>
+      <div class="loading-steps">论点/论据/结论识别 · 层级关系构建 · 逻辑断层检测</div>
+    </div>
+  `;
+  const btn = document.getElementById('btnStartLogic');
+  btn.disabled = true; btn.textContent = '分析中...';
+
+  setTimeout(() => {
+    currentLogicNodes = [...logicNodes];
+    renderLogicStructure();
+    const warnings = currentLogicNodes.filter(n => n.warning).length;
+    document.getElementById('logicCount').textContent = warnings;
+    btn.disabled = false; btn.textContent = '🔍 分析逻辑';
+    showToast(`分析完成，发现 ${warnings} 处逻辑断层`, 'success');
+  }, 2000);
+}
+
+function renderLogicStructure() {
+  const panel = document.getElementById('logicPanel');
+  if (currentLogicNodes.length === 0) { renderLogicEmpty(); return; }
+
+  const claims = currentLogicNodes.filter(n => n.type === 'claim').length;
+  const evidence = currentLogicNodes.filter(n => n.type === 'evidence').length;
+  const conclusions = currentLogicNodes.filter(n => n.type === 'conclusion').length;
+  const warnings = currentLogicNodes.filter(n => n.warning).length;
+  const typeClass = { claim: 'ln-claim', evidence: 'ln-evidence', conclusion: 'ln-conclusion', transition: 'ln-transition' };
+
+  let html = `
+    <div class="logic-summary-bar">
+      <div class="logic-summary-title">📊 论证结构概览</div>
+      <div class="logic-summary-stats">
+        <span class="logic-stat-pill">论点 <strong>${claims}</strong></span>
+        <span class="logic-stat-pill">论据 <strong>${evidence}</strong></span>
+        <span class="logic-stat-pill">结论 <strong>${conclusions}</strong></span>
+        ${warnings > 0 ? `<span class="logic-stat-pill" style="background:var(--danger-bg);color:var(--danger);border-color:var(--danger);">⚠ 断层 <strong>${warnings}</strong></span>` : ''}
+      </div>
+    </div>
+    <div class="logic-canvas">
+      <div class="logic-tree">
+  `;
+
+  currentLogicNodes.forEach(node => {
+    html += `
+      <div class="logic-node" style="padding-left:${(node.level - 1) * 20}px;">
+        <div class="logic-node-content ${node.warning ? 'has-warning' : ''}">
+          <div class="logic-node-head">
+            <span class="logic-node-type ${typeClass[node.type]}">${node.typeName}</span>
+            <span class="logic-node-level">L${node.level}</span>
+          </div>
+          <div class="logic-node-text">${node.text}</div>
+          ${node.warning ? `<div class="logic-warning">⚠ ${node.warning}</div>` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+    </div>
+    <div style="margin:12px;padding:12px;background:var(--brand-bg);border-radius:var(--r-md);">
+      <div style="font-size:12px;font-weight:700;color:var(--brand);margin-bottom:6px;">📌 结构重组建议</div>
+      <div style="font-size:11px;color:var(--gray-600);line-height:1.7;">
+        1. 第3段「当前方法仍有不足」缺少与「巨大潜力」的转折，建议加「尽管如此…」<br>
+        2. 第4段结论应呼应第3段不足，补充「针对上述不足，本文…」<br>
+        3. 论据排列：先陈述不足→再提方案→最后验证，逻辑更连贯
+      </div>
+    </div>
+  `;
+
+  panel.innerHTML = html;
+}
+
+function renderLogicIssues() {
+  const panel = document.getElementById('logicPanel');
+  const issues = currentLogicNodes.filter(n => n.warning);
+  if (issues.length === 0) {
+    panel.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon" style="background:var(--success-bg);">✓</div>
+        <div class="empty-title">未发现逻辑问题</div>
+        <div class="empty-desc">论证结构清晰，层级关系合理</div>
+      </div>
+    `;
+    return;
+  }
+  panel.innerHTML = `<div class="suggestion-list">` + issues.map((node, i) => `
+    <div class="suggestion-card" style="border-left:3px solid var(--danger);">
+      <div class="sg-header">
+        <span class="sg-type-pill" style="background:var(--danger-bg);color:var(--danger);">断层 ${i + 1}</span>
+        <span class="sg-severity">${node.typeName} · L${node.level}</span>
+      </div>
+      <div class="sg-diff" style="border-left-color:var(--danger);">
+        <div style="color:var(--gray-700);font-size:12px;margin-bottom:6px;">${node.text}</div>
+      </div>
+      <div class="sg-reason" style="border-left-color:var(--danger);">⚠ ${node.warning}</div>
+    </div>
+  `).join('') + `</div>`;
+}
+
+// ============================================================
+// AIGC检测
+// ============================================================
+let currentAIGCData = null;
+
+function loadSampleAIGC() {
+  const editor = document.getElementById('aigcEditor');
+  editor.innerHTML = `<div class="doc-page"><div class="doc-page-title">待检测文档</div><div class="doc-page-content">` +
+    sampleAIGCText.map((p, i) => `
+      <p class="para" id="aigcPara-${i}">
+        <span style="font-size:10px;color:var(--gray-400);font-weight:600;margin-right:8px;">¶${i + 1}</span>${p.text}
+      </p>
+    `).join('') + `</div></div>`;
+  const totalWords = sampleAIGCText.reduce((s, p) => s + p.text.length, 0);
+  document.getElementById('aigcWordCount').textContent = `${totalWords.toLocaleString()} 字`;
+  showToast('已载入示例文本', 'success');
+}
+
+function clearAIGC() {
+  document.getElementById('aigcEditor').innerHTML = `
+    <div class="doc-page">
+      <div class="doc-page-title">等待检测的文档</div>
+      <div class="doc-page-content" style="color:var(--gray-400);text-align:center;padding:60px 0;">
+        <div style="font-size:48px;margin-bottom:16px;">🛡️</div>
+        <div style="font-size:15px;font-weight:600;color:var(--gray-500);margin-bottom:8px;">粘贴文本以开始检测</div>
+        <div style="font-size:13px;">系统将逐段输出 AI 生成概率，并高亮风险段落</div>
+      </div>
+    </div>
+  `;
+  document.getElementById('aigcWordCount').textContent = '0 字';
+  currentAIGCData = null;
+  renderAIGCEmpty();
+  document.getElementById('aigcCount').textContent = '0';
+}
+
+function renderAIGCEmpty() {
+  document.getElementById('aigcPanel').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">暂无检测报告</div>
+      <div class="empty-desc">开始检测后，此处将展示段落级 AI 率评分与风险标注</div>
+    </div>
+  `;
+}
+
+function startAIGC() {
+  if (currentAIGCData || document.querySelector('#aigcEditor .doc-page-content p')) {
+    // 已有数据,直接检测
+  } else {
+    const empty = document.querySelector('#aigcEditor .doc-page-content div');
+    if (empty && empty.textContent.includes('粘贴文本')) {
+      showToast('请先载入或粘贴文本', 'error');
+      return;
+    }
+  }
+
+  const panel = document.getElementById('aigcPanel');
+  panel.innerHTML = `
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <div class="loading-text">正在逐段检测 AI 生成概率...</div>
+      <div class="loading-steps">文本特征提取 · 模型推理 · 段落级评分</div>
+    </div>
+  `;
+  const btn = document.getElementById('btnStartAIGC');
+  btn.disabled = true; btn.textContent = '检测中...';
+
+  // 高亮高风险段落
+  setTimeout(() => {
+    sampleAIGCText.forEach((p, i) => {
+      const el = document.getElementById('aigcPara-' + i);
+      if (el && p.aiRate >= 0.5) {
+        el.style.background = p.aiRate >= 0.7 ? 'rgba(239,68,68,0.08)' : 'rgba(245,158,11,0.08)';
+        el.style.borderLeft = `3px solid ${p.aiRate >= 0.7 ? 'var(--danger)' : 'var(--warning)'}`;
+        el.style.paddingLeft = '8px';
+        el.style.borderRadius = '3px';
+      }
+    });
+  }, 1000);
+
+  setTimeout(() => {
+    currentAIGCData = sampleAIGCText;
+    renderAIGCReport();
+    const highRisk = sampleAIGCText.filter(p => p.aiRate >= 0.5).length;
+    document.getElementById('aigcCount').textContent = sampleAIGCText.length;
+    btn.disabled = false; btn.textContent = '🔬 开始检测';
+    showToast(`检测完成，发现 ${highRisk} 处高风险段落`, highRisk > 0 ? 'error' : 'success');
+  }, 2000);
+}
+
+function getRiskClass(rate) {
+  if (rate < 0.3) return 'risk-low';
+  if (rate < 0.5) return 'risk-mid';
+  if (rate < 0.7) return 'risk-high';
+  return 'risk-extreme';
+}
+function getRiskName(rate) {
+  if (rate < 0.3) return '低风险';
+  if (rate < 0.5) return '中风险';
+  if (rate < 0.7) return '高风险';
+  return '极高风险';
+}
+function getRiskColor(rate) {
+  if (rate < 0.3) return '#10b981';
+  if (rate < 0.5) return '#f59e0b';
+  if (rate < 0.7) return '#f43f5e';
+  return '#ef4444';
+}
+
+function renderAIGCReport() {
+  const panel = document.getElementById('aigcPanel');
+  if (!currentAIGCData) { renderAIGCEmpty(); return; }
+
+  const avgRate = currentAIGCData.reduce((s, p) => s + p.aiRate, 0) / currentAIGCData.length;
+  const highRisk = currentAIGCData.filter(p => p.aiRate >= 0.5).length;
+  const extremeRisk = currentAIGCData.filter(p => p.aiRate >= 0.7).length;
+  const lowRisk = currentAIGCData.filter(p => p.aiRate < 0.3).length;
+  const circumference = 2 * Math.PI * 48;
+  const dashOffset = circumference * (1 - avgRate);
+
+  panel.innerHTML = `
+    <div class="aigc-hero">
+      <div class="aigc-hero-ring">
+        <svg width="110" height="110" style="transform:rotate(-90deg);">
+          <circle cx="55" cy="55" r="48" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="8"/>
+          <circle cx="55" cy="55" r="48" fill="none" stroke="${getRiskColor(avgRate)}" stroke-width="8"
+            stroke-linecap="round"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${dashOffset}"
+            style="transition:stroke-dashoffset 1s ease;"/>
+        </svg>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+          <div class="aigc-hero-num">${Math.round(avgRate * 100)}<span class="aigc-hero-unit">%</span></div>
+          <div class="aigc-hero-label">平均 AI 率</div>
+        </div>
+      </div>
+      <div class="aigc-hero-status">${avgRate >= 0.5 ? '⚠ 风险较高，建议降AI改写' : avgRate >= 0.3 ? '⚡ 存在一定风险' : '✓ 风险较低'}</div>
+      <div style="font-size:10px;opacity:0.5;margin-top:8px;">检测模型 aigc-detector-v2.3 · ${new Date().toLocaleString('zh-CN')}</div>
+    </div>
+    <div class="aigc-stats-grid">
+      <div class="aigc-stat-cell">
+        <div class="aigc-stat-num">${currentAIGCData.length}</div>
+        <div class="aigc-stat-label">检测段落</div>
+      </div>
+      <div class="aigc-stat-cell">
+        <div class="aigc-stat-num success">${lowRisk}</div>
+        <div class="aigc-stat-label">低风险</div>
+      </div>
+      <div class="aigc-stat-cell">
+        <div class="aigc-stat-num warning">${highRisk - extremeRisk}</div>
+        <div class="aigc-stat-label">高风险</div>
+      </div>
+      <div class="aigc-stat-cell">
+        <div class="aigc-stat-num danger">${extremeRisk}</div>
+        <div class="aigc-stat-label">极高风险</div>
+      </div>
+    </div>
+    <div style="padding:14px 16px;">
+      <button class="btn btn-primary btn-sm" style="width:100%;" onclick="showToast('报告已导出（原型演示）','success')">📄 导出 AI 率报告</button>
+    </div>
+  `;
+}
+
+function renderAIGCParagraphs() {
+  const panel = document.getElementById('aigcPanel');
+  if (!currentAIGCData) { renderAIGCEmpty(); return; }
+
+  panel.innerHTML = currentAIGCData.map((p, i) => {
+    const isHigh = p.aiRate >= 0.5;
+    const newRate = Math.round(p.aiRate * 0.3 * 100);
+    return `
+      <div class="aigc-para-card ${isHigh ? 'high-risk' : ''}">
+        <div class="aigc-para-head">
+          <span class="aigc-para-label">¶ 段落 ${i + 1} · ${getRiskName(p.aiRate)}</span>
+          <div class="aigc-para-bar-wrap">
+            <div class="aigc-para-bar" style="width:${p.aiRate * 100}%;background:${getRiskColor(p.aiRate)};"></div>
+          </div>
+          <span class="aigc-para-score ${getRiskClass(p.aiRate)}">${Math.round(p.aiRate * 100)}%</span>
+        </div>
+        <div class="aigc-para-body">${p.text}</div>
+        ${isHigh ? `
+          <div class="aigc-para-actions">
+            <button class="btn btn-primary btn-sm" style="width:100%;" onclick="rewritePara(${i})" id="rewriteBtn-${i}">🔄 降AI改写</button>
+          </div>
+          <div class="rewrite-result" id="rewriteResult-${i}">
+            <div class="rewrite-label">✓ 改写完成 · AI率降至 ${newRate}%</div>
+            <div class="rewrite-text">${aigcRewrites[i] || '改写中...'}</div>
+            <div class="rewrite-meta">
+              <span class="rewrite-meta-item">语义相似度 <strong>0.88</strong></span>
+              <span class="rewrite-meta-item">术语保留 <strong>100%</strong></span>
+              <span class="rewrite-meta-item">AI率下降 <strong>${Math.round((1 - 0.3) * 100)}%</strong></span>
+            </div>
+            <button class="btn btn-success btn-sm" style="width:100%;margin-top:8px;" onclick="acceptRewrite(${i})">✓ 接受改写</button>
+          </div>
+        ` : `<div class="aigc-para-actions"><div style="font-size:11px;color:var(--success);text-align:center;padding:4px;">✓ 风险较低，无需改写</div></div>`}
+      </div>
+    `;
+  }).join('');
+}
+
+function rewritePara(i) {
+  const btn = document.getElementById('rewriteBtn-' + i);
+  const result = document.getElementById('rewriteResult-' + i);
+  btn.textContent = '改写中...';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.style.display = 'none';
+    result.classList.add('show');
+    showToast('改写完成，AI率已下降', 'success');
+  }, 1500);
+}
+
+function acceptRewrite(i) {
+  const para = document.getElementById('aigcPara-' + i);
+  if (para) {
+    para.style.background = 'rgba(16,185,129,0.08)';
+    para.style.borderLeft = '3px solid var(--success)';
+  }
+  const card = document.querySelectorAll('.aigc-para-card')[i];
+  if (card) {
+    card.classList.remove('high-risk');
+    const score = card.querySelector('.aigc-para-score');
+    score.className = 'aigc-para-score risk-low';
+    score.textContent = Math.round(sampleAIGCText[i].aiRate * 0.3 * 100) + '%';
+    const bar = card.querySelector('.aigc-para-bar');
+    bar.style.width = (sampleAIGCText[i].aiRate * 0.3 * 100) + '%';
+    bar.style.background = 'var(--success)';
+  }
+  showToast('改写已采纳', 'success');
+}
+
+// ============================================================
+// Toast
+// ============================================================
+function showToast(msg, type = '') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.innerHTML = `${type === 'success' ? '✓' : type === 'error' ? '⚠' : 'ℹ'} ${msg}`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(120%)';
+    toast.style.transition = 'all 0.3s';
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+// ============================================================
+// 登录/登出
+// ============================================================
+function checkLoginState() {
+  const loggedIn = localStorage.getItem('zhuoyan_loggedIn') === 'true';
+  document.getElementById('loginOverlay').classList.toggle('hidden', loggedIn);
+}
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pwd = document.getElementById('loginPassword').value;
+  if (!email || !pwd) { showToast('请输入邮箱和密码', 'error'); return; }
+  const btn = document.querySelector('.login-submit');
+  btn.textContent = '登录中...'; btn.disabled = true;
+  setTimeout(() => {
+    localStorage.setItem('zhuoyan_loggedIn', 'true');
+    localStorage.setItem('zhuoyan_user', email);
+    document.getElementById('loginOverlay').classList.add('hidden');
+    btn.textContent = '登 录'; btn.disabled = false;
+    showToast('登录成功', 'success');
+  }, 1000);
+}
+function doLogout() {
+  document.getElementById('userMenu').classList.remove('show');
+  localStorage.removeItem('zhuoyan_loggedIn');
+  localStorage.removeItem('zhuoyan_user');
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('loginPassword').value = '';
+  showToast('已退出登录');
+}
+function toggleUserMenu() {
+  document.getElementById('userMenu').classList.toggle('show');
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.user-menu-wrap')) {
+    document.getElementById('userMenu').classList.remove('show');
+  }
+});
+// 回车登录
+document.getElementById('loginPassword').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
+
+// ============================================================
+// 初始化
+// ============================================================
+checkLoginState();
+document.getElementById('polishInput').addEventListener('input', () => updateWordCount('polishInput', 'polishWordCount'));
+document.getElementById('logicInput').addEventListener('input', () => updateWordCount('logicInput', 'logicWordCount'));
+
+renderDocList();
+renderWsRecent();
+</script>
+
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+<symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+<symbol id="i-logic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><path d="M8.5 6h3.5a4 4 0 0 1 4 4M8.5 18h3.5a4 4 0 0 0 4-4"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0"/></symbol>
+<symbol id="i-gift" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8M2 7h20v5H2zM12 7v14M12 7C10 3 8 3 8 3s-2 0-2 2 4 2 6 2M12 7c2-4 4-4 4-4s2 0 2 2-4 2-6 2"/></symbol>
+<symbol id="i-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9zM8 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/></symbol>
+<symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 7 7 2-7 2-2 7-2-7-7-2 7-2 2-7z"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4"/></symbol>
+<symbol id="i-scan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M4 12h16"/></symbol>
+<symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 6.5L21 10l-5 4.5L17.5 21 12 17.5 6.5 21 8 14.5 3 10l6.5-.5z"/></symbol>
+<symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+<symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 5 12c-1 1-2 2-2 4H9c0-2-1-3-2-4a7 7 0 0 1 5-12z"/></symbol>
+<symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M9 8h6l2 4-4-1v7"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></symbol>
+</svg>
+<style>.icon{display:inline-block;width:1.15em;height:1.15em;vertical-align:-0.2em;flex-shrink:0}</style>
+<script>
+(function(){
+  var M={'🏠':'i-home','✍️':'i-edit','🧩':'i-logic','🛡️':'i-shield','📁':'i-folder','🔍':'i-search','🔔':'i-bell','🎁':'i-gift','📋':'i-clipboard','🚀':'i-sparkle','✨':'i-sparkle','📥':'i-download','📄':'i-doc','🔬':'i-scan','⭐':'i-star','☰':'i-menu','💡':'i-bulb','⚠':'i-warn','📌':'i-pin','📊':'i-chart','🔄':'i-refresh'};
+  var R=false;
+  function rep(){
+    if(R)return;R=true;
+    var w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(n){var t=n.parentElement.tagName;if(t==='SCRIPT'||t==='STYLE'||t==='TEXTAREA'||t==='SVG')return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT}});
+    var ns=[];while(w.nextNode())ns.push(w.currentNode);
+    ns.forEach(function(n){
+      var h=n.textContent,c=false;
+      for(var e in M){if(h.indexOf(e)>=0){h=h.split(e).join('<svg class="icon"><use href="#'+M[e]+'"/></svg>');c=true;}}
+      if(c){var s=document.createElement('span');s.innerHTML=h;n.parentNode.replaceChild(s,n);}
+    });
+    R=false;
+  }
+  if(document.readyState!=='loading')rep();else document.addEventListener('DOMContentLoaded',rep);
+  var tm;new MutationObserver(function(){clearTimeout(tm);tm=setTimeout(rep,50);}).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
+
+</body>
+</html>
