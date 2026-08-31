@@ -1,5 +1,8 @@
 # 琢言 · 学术写作助手
 
+![CI](https://github.com/11MISFITKID11/zhuoyan/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+
 > 一个本地运行的学术写作辅助工具，提供语言润色、逻辑分析、AIGC检测等功能
 
 ## 功能特点
