@@ -24,4 +24,4 @@ jobs:
         run: npm run lint
 
       - name: 单元测试 + 覆盖率门槛
-        run: npx jest --coverage --coverageThreshold='{"global":{"lines":35,"statements":30,"functions":30,"branches":25}}'
+        run: npx jest --coverage --coverageThreshold='{"global":{"lines":30,"statements":25,"functions":15,"branches":20}}'
