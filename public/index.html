@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>琢言 · 学术写作助手</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<script src="vendor/mammoth.browser.min.js"></script>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ============ 登录/注册/忘记密码 ============ -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="auth-brand-content">
+        <div class="auth-logo">
+          <div class="auth-logo-mark">琢</div>
+          <div class="auth-logo-name">琢言</div>
+        </div>
+        <div class="auth-brand-tagline">中文+学术双核</div>
+        <div class="auth-brand-desc">语言润色 · 逻辑优化 · AIGC合规<br>让每一篇论文更专业、更严谨、更原创</div>
+      </div>
+    </div>
+    <div class="auth-form">
+      <!-- ====== 登录 ====== -->
+      <div class="auth-form-inner active" id="authFormLogin">
+        <div class="auth-form-title">欢迎回来</div>
+        <div class="auth-form-sub">登录你的琢言账号</div>
+        <div class="auth-error" id="loginError"></div>
+        <div class="auth-field">
+          <span class="field-icon">📧</span>
+          <input type="email" id="loginEmail" placeholder="邮箱地址" />
+        </div>
+        <div class="auth-field">
+          <span class="field-icon">🔒</span>
+          <input type="password" id="loginPassword" placeholder="密码" onkeydown="if(event.key==='Enter')doLogin()" />
+        </div>
+        <button class="auth-submit" id="loginBtn" onclick="doLogin()">登 录</button>
+        <div class="auth-link"><a onclick="showAuthForm('register')">没有账号？立即注册</a> &nbsp;·&nbsp; <a onclick="showAuthForm('forgot')">忘记密码？</a></div>
+      </div>
+
+      <!-- ====== 注册 ====== -->
+      <div class="auth-form-inner" id="authFormRegister">
+        <div class="auth-back" onclick="showAuthForm('login')">← 返回登录</div>
+        <div class="auth-form-title">创建账号</div>
+        <div class="auth-form-sub">注册琢言账号，开始学术写作</div>
+        <div class="auth-error" id="registerError"></div>
+        <div class="auth-field">
+          <span class="field-icon">📧</span>
+          <input type="email" id="regEmail" placeholder="邮箱地址" />
+        </div>
+        <div class="auth-field">
+          <span class="field-icon">🔒</span>
+          <input type="password" id="regPassword" placeholder="密码（至少8位）" />
+        </div>
+        <div class="auth-field">
+          <span class="field-icon">🔒</span>
+          <input type="password" id="regConfirm" placeholder="确认密码" />
+        </div>
+        <div class="auth-field" style="border-color:var(--brand-light);background:var(--brand-bg);">
+          <span class="field-icon">❓</span>
+          <input type="text" id="regSecurityQuestion" placeholder="设置安全问题（用于找回密码）" />
+        </div>
+        <div class="auth-field">
+          <span class="field-icon">✏️</span>
+          <input type="text" id="regSecurityAnswer" placeholder="安全问题答案" onkeydown="if(event.key==='Enter')doRegister()" />
+        </div>
+        <button class="auth-submit" id="registerBtn" onclick="doRegister()">注 册</button>
+        <div class="auth-link">已有账号？<a onclick="showAuthForm('login')">立即登录</a></div>
+      </div>
+
+      <!-- ====== 忘记密码 ====== -->
+      <div class="auth-form-inner" id="authFormForgot">
+        <div class="auth-back" onclick="showAuthForm('login')">← 返回登录</div>
+        <div class="auth-form-title">重置密码</div>
+        <div class="auth-form-sub">输入注册邮箱，我们将重置你的密码</div>
+        <div class="auth-success" id="forgotSuccess"></div>
+        <div class="auth-error" id="forgotError"></div>
+        <div class="auth-field">
+          <span class="field-icon">📧</span>
+          <input type="email" id="forgotEmail" placeholder="注册时使用的邮箱" onkeydown="if(event.key==='Enter')doForgotStep1()" />
+        </div>
+        <!-- 安全问题区域（第二步） -->
+        <div id="forgotSecuritySection" style="display:none;">
+          <div class="auth-field">
+            <span class="field-icon">❓</span>
+            <input type="text" id="forgotSecurityQuestion" readonly style="color:var(--gray-500);cursor:default;" />
+          </div>
+          <div class="auth-field">
+            <span class="field-icon">✏️</span>
+            <input type="text" id="forgotSecurityAnswer" placeholder="回答安全问题" />
+          </div>
+          <div class="auth-field">
+            <span class="field-icon">🔒</span>
+            <input type="password" id="forgotNewPassword" placeholder="新密码（至少8位）" onkeydown="if(event.key==='Enter')doForgotStep2()" />
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="auth-submit" id="forgotBtn" onclick="doForgotStep1()" style="flex:2;">下一步</button>
+          <button class="btn btn-ghost" id="forgotCancelBtn" onclick="showAuthForm('login')" style="flex:1;">取消</button>
+        </div>
+        <div class="auth-link"><a onclick="showAuthForm('login')">返回登录</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 顶部导航 ============ -->
+<div class="topbar">
+  <div class="logo" onclick="switchView('workspace')">
+    <div class="logo-mark">琢</div>
+    <div class="logo-text">
+      <div class="logo-name">琢言</div>
+      <div class="logo-tag">学术写作 · 润色 · 逻辑 · 合规</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" data-view="workspace" onclick="switchView('workspace')"><span class="tab-icon">🏠</span> 工作台</div>
+    <div class="nav-tab" data-view="polish" onclick="switchView('polish')"><span class="tab-icon">✍️</span> 学术润色</div>
+    <div class="nav-tab" data-view="logic" onclick="switchView('logic')"><span class="tab-icon">🧩</span> 逻辑优化</div>
+    <div class="nav-tab" data-view="aigc" onclick="switchView('aigc')"><span class="tab-icon">🛡️</span> AIGC检测</div>
+    <div class="nav-tab" data-view="agent" onclick="switchView('agent')"><span class="tab-icon">🤖</span> 全文分析</div>
+  </div>
+  <div class="topbar-actions">
+    <div class="icon-btn" onclick="showToast('帮助文档')">?</div>
+    <div class="icon-btn" onclick="showSettings()" title="API 设置">⚙️</div>
+    <div class="auth-user-avatar" id="authAvatar" onclick="confirm('退出登录？') && doLogout()" title="点击退出">琢</div>
+  </div>
+</div>
+
+<!-- ============ 主体 ============ -->
+<div class="main">
+
+  <!-- ============ 侧边栏 ============ -->
+  <div class="sidebar">
+    <div class="sidebar-top">
+      <button class="btn-new" onclick="newDocument()">+ 新建文档</button>
+    </div>
+    <div class="sidebar-search">
+      <span>🔍</span>
+      <input type="text" placeholder="搜索文档..." oninput="filterDocs(this.value)" />
+    </div>
+    <div class="section-label">📁 我的文档</div>
+    <div class="doc-list" id="docList"></div>
+    <div class="sidebar-bottom">
+      <div class="quota-card">
+        <div class="quota-header">
+          <span class="quota-label">今日免费额度</span>
+          <span class="quota-value" id="quotaText">0 / 3,000</span>
+        </div>
+        <div class="quota-bar"><div class="quota-fill" id="quotaFill" style="width: 0%"></div></div>
+        <div class="quota-hint" id="quotaHint">⚙️ 配置 API Key 或 升级 Pro 解锁 3,000 字数限制</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 内容区 ============ -->
+  <div class="content">
+
+    <!-- ============ 工作台 ============ -->
+    <div class="view active" id="view-workspace">
+      <div class="workspace">
+        <div class="ws-hero">
+          <div class="ws-hero-content">
+            <div class="ws-greeting">下午好 👋</div>
+            <h1>让每一篇论文更专业、更严谨、更原创</h1>
+            <p>中文+学术双核 · 语言润色 · 逻辑优化 · AIGC合规</p>
+            <!-- 统计面板已移除 -->
+          </div>
+        </div>
+        <div class="ws-section">
+          <div class="ws-section-head">
+            <div class="ws-section-title">🚀 快速开始</div>
+          </div>
+          <div class="ws-cards">
+            <div class="ws-card" onclick="switchView('polish'); loadSamplePolish();">
+              <div class="ws-card-icon" style="background: var(--clarity-bg); color: var(--clarity);">✍️</div>
+              <div class="ws-card-title">学术语言润色</div>
+              <div class="ws-card-desc">中英双语法纠错、措辞精炼、术语统一</div>
+              <div class="ws-card-arrow">→</div>
+            </div>
+            <div class="ws-card" onclick="switchView('logic'); loadSampleLogic();">
+              <div class="ws-card-icon" style="background: var(--term-bg); color: var(--term);">🧩</div>
+              <div class="ws-card-title">逻辑优化</div>
+              <div class="ws-card-desc">论证层级梳理、段落衔接、逻辑断层标注</div>
+              <div class="ws-card-arrow">→</div>
+            </div>
+            <div class="ws-card" onclick="switchView('aigc'); loadSampleAIGC();">
+              <div class="ws-card-icon" style="background: var(--danger-bg); color: var(--danger);">🛡️</div>
+              <div class="ws-card-title">AIGC 检测</div>
+              <div class="ws-card-desc">段落级 AI 率检测、高亮标注、降AI改写</div>
+              <div class="ws-card-arrow">→</div>
+            </div>
+            <div class="ws-card" onclick="switchView('agent');">
+              <div class="ws-card-icon" style="background: var(--brand-bg); color: var(--brand);">🤖</div>
+              <div class="ws-card-title">全文智能分析</div>
+              <div class="ws-card-desc">AI Agent 多步推理：结构→术语→逻辑→风格→AIGC→综合报告</div>
+              <div class="ws-card-arrow">→</div>
+            </div>
+          </div>
+        </div>
+        <div class="ws-section">
+          <div class="ws-section-head">
+            <div class="ws-section-title">📋 最近文档</div>
+          </div>
+          <div class="ws-recent" id="wsRecent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 学术润色 ============ -->
+    <div class="view" id="view-polish">
+      <div class="module-tip">✍️ 输入或粘贴你的学术文本，点击「开始润色」获取修改建议</div>
+      <div class="editor-layout">
+        <div class="editor-center">
+          <div class="editor-toolbar">
+            <span class="toolbar-title">✍️ 学术润色<span class="toolbar-doc-name" id="polishDocName">未命名文档</span></span>
+            <button class="btn btn-outline btn-sm" onclick="importWord('polish')">📄 Word</button>
+            <button class="btn btn-outline btn-sm" onclick="loadSamplePolish()">📥 载入示例</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearPolish()">清空</button>
+            <button class="btn btn-primary btn-sm" onclick="saveAsDoc('polish')">💾 保存</button>
+            <button class="btn btn-success btn-sm" onclick="exportDoc('polish')">📤 导出</button>
+            <button class="btn btn-primary btn-sm" id="btnStartPolish" onclick="startPolish()">✨ 开始润色</button>
+            <button class="btn btn-success btn-sm" id="btnAcceptAll" style="display:none" onclick="acceptAllPolish()">✓ 接受全部</button>
+          </div>
+          <div class="doc-editor" id="polishEditor">
+            <textarea class="doc-input" id="polishInput" placeholder="在此粘贴或输入你的学术论文文本...
+
+支持中英文混排，系统将自动识别：
+• 语法错误（搭配不当、成分残缺、句式杂糅）
+• 措辞问题（口语化、冗余、模糊表达）
+• 术语不一致（同一概念多种表述）
+• 句式优化（长句拆分、被动改主动）
+
+每日免费额度：3,000 字"></textarea>
+          </div>
+          <div class="editor-statusbar">
+            <span class="status-dot"></span>
+            <span id="polishWordCount">0 字</span>
+            <span class="status-divider">|</span>
+            <span>术语库 50+ 学科</span>
+            <span class="status-divider">|</span>
+            <span id="polishStatus" style="color: var(--success);">● 就绪</span>
+          </div>
+        </div>
+        <div class="panel-right">
+          <div class="panel-tabs">
+            <div class="panel-tab active" data-panel="suggestions" onclick="switchPanel('polish', 'suggestions')">建议<span class="count" id="polishCount">0</span></div>
+            <div class="panel-tab" data-panel="summary" onclick="switchPanel('polish', 'summary')">概览</div>
+          </div>
+          <div class="panel-body" id="polishPanel">
+            <div class="empty-state">
+              <div class="empty-icon">📝</div>
+              <div class="empty-title">等待润色</div>
+              <div class="empty-desc">输入文本并点击「开始润色」，系统将逐条给出修改建议</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 逻辑优化 ============ -->
+    <div class="view" id="view-logic">
+      <div class="module-tip">🧩 粘贴论文正文，系统将自动识别论证结构并标注逻辑断层</div>
+      <div class="editor-layout">
+        <div class="editor-center">
+          <div class="editor-toolbar">
+            <span class="toolbar-title">🧩 逻辑优化<span class="toolbar-doc-name">论证结构分析</span></span>
+            <button class="btn btn-outline btn-sm" onclick="importWord('logic')">📄 Word</button>
+            <button class="btn btn-outline btn-sm" onclick="loadSampleLogic()">📥 载入示例</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearLogic()">清空</button>
+            <button class="btn btn-primary btn-sm" onclick="saveAsDoc('logic')">💾 保存</button>
+            <button class="btn btn-success btn-sm" onclick="exportDoc('logic')">📤 导出</button>
+            <button class="btn btn-primary btn-sm" id="btnStartLogic" onclick="startLogic()">🔍 分析逻辑</button>
+            <button class="btn btn-success btn-sm" id="btnOptimizeLogic" style="display:none" onclick="optimizeLogic()">✨ 优化结构</button>
+            <button class="btn btn-success btn-sm" id="btnAcceptLogic" style="display:none" onclick="acceptLogicOptimize()">✓ 接受优化</button>
+          </div>
+          <div class="doc-editor" id="logicEditor">
+            <textarea class="doc-input" id="logicInput" placeholder="在此粘贴论文正文，系统将自动识别论证结构...
+
+适用文体：
+• 学位论文（绪论/正文/结论）
+• 期刊投稿（IMRaD 结构）
+• 课题申报书（研究方案论证）
+• 文献综述（研究脉络梳理）
+
+系统将识别：论点 / 论据 / 结论的层级关系，标注逻辑断层与衔接薄弱处。"></textarea>
+          </div>
+          <div class="editor-statusbar">
+            <span class="status-dot"></span>
+            <span id="logicWordCount">0 字</span>
+            <span class="status-divider">|</span>
+            <span>识别准确率 ≥ 85%</span>
+            <span class="status-divider">|</span>
+            <span id="logicStatus" style="color: var(--success);">● 就绪</span>
+          </div>
+        </div>
+        <div class="panel-right">
+          <div class="panel-tabs">
+            <div class="panel-tab active" data-panel="structure" onclick="switchPanel('logic', 'structure')">结构图</div>
+            <div class="panel-tab" data-panel="issues" onclick="switchPanel('logic', 'issues')">问题<span class="count" id="logicCount">0</span></div>
+          </div>
+          <div class="panel-body" id="logicPanel">
+            <div class="empty-state">
+              <div class="empty-icon">🧩</div>
+              <div class="empty-title">等待分析</div>
+              <div class="empty-desc">粘贴论文文本并点击「分析逻辑」，查看论证层级与断层标注</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ AIGC检测 ============ -->
+    <div class="view" id="view-aigc">
+      <div class="module-tip">🛡️ 检测AI生成概率，改写高风险段落，闭环降AI</div>
+      <div class="editor-layout">
+        <div class="editor-center">
+          <div class="editor-toolbar">
+            <span class="toolbar-title">🛡️ AIGC 检测<span class="toolbar-doc-name">AI率扫描</span></span>
+            <button class="btn btn-outline btn-sm" onclick="importWord('aigc')">📄 Word</button>
+            <button class="btn btn-outline btn-sm" onclick="loadSampleAIGC()">📥 载入示例</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearAIGC()">清空</button>
+            <button class="btn btn-primary btn-sm" onclick="saveAsDoc('aigc')">💾 保存</button>
+            <button class="btn btn-success btn-sm" onclick="exportDoc('aigc')">📤 导出</button>
+            <button class="btn btn-primary btn-sm" id="btnStartAIGC" onclick="startAIGC()">🔬 开始检测</button>
+          </div>
+          <div class="doc-editor" id="aigcEditor">
+            <textarea class="doc-input" id="aigcInput" placeholder="在此粘贴需要检测的学术论文文本...
+
+系统将逐段输出 AI 生成概率，并高亮风险段落
+高风险段落支持一键降AI改写"></textarea>
+          </div>
+          <div class="editor-statusbar">
+            <span class="status-dot"></span>
+            <span id="aigcWordCount">0 字</span>
+            <span class="status-divider">|</span>
+            <span>检测准确率 ≥ 90%</span>
+            <span class="status-divider">|</span>
+            <span id="aigcStatus" style="color: var(--success);">● 就绪</span>
+          </div>
+        </div>
+        <div class="panel-right">
+          <div class="panel-tabs">
+            <div class="panel-tab active" data-panel="report" onclick="switchPanel('aigc', 'report')">报告</div>
+            <div class="panel-tab" data-panel="paragraphs" onclick="switchPanel('aigc', 'paragraphs')">段落详情<span class="count" id="aigcCount">0</span></div>
+          </div>
+          <div class="panel-body" id="aigcPanel">
+            <div class="empty-state">
+              <div class="empty-icon">📊</div>
+              <div class="empty-title">暂无检测报告</div>
+              <div class="empty-desc">开始检测后，此处将展示段落级 AI 率评分与风险标注</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 全文智能分析 Agent ============ -->
+    <div class="view" id="view-agent">
+      <div class="module-tip">🤖 AI Agent 多维度分析：结构→术语→逻辑→风格→AIGC，自动生成综合报告与改进计划</div>
+      <div class="editor-layout">
+        <div class="editor-center">
+          <div class="editor-toolbar">
+            <span class="toolbar-title">🤖 全文智能分析<span class="toolbar-doc-name">Agent 多步推理</span></span>
+            <button class="btn btn-outline btn-sm" onclick="importWord('agent')">📄 Word</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearAgent()">清空</button>
+            <button class="btn btn-success btn-sm" onclick="exportAgentReport()">📤 导出报告</button>
+            <button class="btn btn-primary btn-sm" id="btnStartAgent" onclick="startAgentAnalysis()">🤖 开始分析</button>
+          </div>
+          <div class="doc-editor" id="agentEditor">
+            <textarea class="doc-input" id="agentInput" placeholder="在此粘贴完整的论文文本...
+
+AI Agent 将执行多步分析：
+1. 结构分析  — 识别段落功能与论文结构
+2. 术语一致性 — 发现术语不统一问题
+3. 逻辑连贯性 — 追踪论证链条，发现逻辑断层
+4. 风格评估   — 正式度、统一性、流畅度评分
+5. AIGC 风险  — 全文 AI 生成概率评估
+6. 综合报告   — 优缺点 + 优先改进建议 + 行动计划
+
+建议输入 500 字以上的完整论文段落以获得最佳分析效果" oninput="updateAgentWordCount()"></textarea>
+          </div>
+          <div class="editor-statusbar">
+            <span class="status-dot"></span>
+            <span id="agentWordCount">0 字</span>
+            <span class="status-divider">|</span>
+            <span>Agent 自动多步推理</span>
+            <span class="status-divider">|</span>
+            <span id="agentStatus" style="color: var(--success);">● 就绪</span>
+          </div>
+        </div>
+        <div class="panel-right">
+          <div class="panel-tabs">
+            <div class="panel-tab active" data-panel="overview" onclick="switchPanel('agent', 'overview')">总览</div>
+            <div class="panel-tab" data-panel="structure" onclick="switchPanel('agent', 'structure')">结构</div>
+            <div class="panel-tab" data-panel="details" onclick="switchPanel('agent', 'details')">详细分析</div>
+            <div class="panel-tab" data-panel="report" onclick="switchPanel('agent', 'report')">综合报告</div>
+          </div>
+          <div class="panel-body" id="agentPanel">
+            <div class="empty-state">
+              <div class="empty-icon">🤖</div>
+              <div class="empty-title">等待全文分析</div>
+              <div class="empty-desc">粘贴完整论文文本，AI Agent 将自动执行多维度分析并生成综合报告</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ============ API 设置弹窗 ============ -->
+<div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)hideSettings()">
+  <div class="settings-card">
+    <div class="settings-header">
+      <h2>⚙️ API 设置</h2>
+      <button class="settings-close" onclick="hideSettings()">✕</button>
+    </div>
+    <div class="settings-body">
+
+      <div class="api-status-bar">
+        <span class="api-dot" id="apiStatusDot"></span>
+        <span id="apiStatusText">API 未配置 — 将使用模拟数据</span>
+      </div>
+
+      <!-- API Key（保存到服务端，与账号绑定） -->
+      <div class="settings-group">
+        <label class="settings-label">API Key <span class="hint">加密保存到服务器，与账号绑定</span></label>
+        <input class="settings-input code" type="password" id="inputApiKey" placeholder="sk-... 可直接填入临时 Key，或留空使用已保存的 Key" oninput="markDirty()" />
+        <div style="font-size:10px;color:var(--gray-400);margin-top:4px;" id="apiKeyHint">保存后将与你的账号绑定，随时可更新</div>
+      </div>
+
+      <!-- API Endpoint（所有提供商均可手动编辑） -->
+      <div class="settings-group">
+        <label class="settings-label">API Endpoint <span class="hint">留空使用默认地址，可填入代理/镜像地址</span></label>
+        <input class="settings-input code" type="text" id="inputCustomEndpoint" placeholder="留空自动，或填入 https://your-proxy.com/v1" oninput="markDirty()" />
+      </div>
+
+      <!-- 模型名称 -->
+      <div class="settings-group">
+        <label class="settings-label">模型名称 <span class="hint">如 qwen3.6-plus / qwen-plus / deepseek-chat / gpt-4o-mini</span></label>
+        <input class="settings-input code" type="text" id="inputModel" placeholder="qwen3.6-plus" oninput="markDirty()" />
+      </div>
+    </div>
+    <div class="settings-footer">
+      <button class="btn btn-success" onclick="hideSettings();setTimeout(showProUpgrade,300)" style="margin-right:auto;">⭐ 升级 Pro</button>
+      <button class="btn btn-ghost" onclick="hideSettings()">取消</button>
+      <button class="btn btn-primary" onclick="saveSettings()">保存设置</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Pro 升级弹窗（额度耗尽时弹出） ============ -->
+<div class="pro-overlay" id="proOverlay" onclick="if(event.target===this)closePro()">
+  <div class="pro-card">
+    <div class="pro-header">
+      <div class="pro-icon">⭐</div>
+      <h2>今日额度已用完</h2>
+      <p>升级 Pro 会员，解锁无限使用</p>
+    </div>
+    <div class="pro-body">
+      <ul class="pro-features">
+        <li>📝 无限字数，畅享写作</li>
+        <li>🧩 逻辑优化 · 结构重组</li>
+        <li>🛡️ AIGC 检测 · 降 AI 改写</li>
+        <li>🔑 支持自带 API Key 调用</li>
+      </ul>
+      <div class="pro-price">
+        <div class="amount">¥29</div>
+        <div class="period">/ 月 · 随时取消</div>
+      </div>
+      <button class="pro-btn" onclick="showPayment()">⭐ 升级 Pro 会员</button>
+      <div class="pro-skip"><a onclick="closePro()">暂时跳过，继续使用免费版</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 支付确认页面 ============ -->
+<div class="pro-overlay" id="paymentOverlay" onclick="if(event.target===this)closePro()">
+  <div class="pro-card">
+    <div class="pro-header">
+      <div class="pro-icon">💳</div>
+      <h2>确认升级</h2>
+      <p>琢言 · Pro 会员 · 月付方案</p>
+    </div>
+    <div class="pro-body">
+      <div style="padding:12px 0;border-bottom:1px solid var(--gray-100);margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;">
+          <span style="color:var(--gray-600);">Pro 会员月费</span>
+          <span style="font-weight:700;">¥29.00</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;">
+          <span style="color:var(--gray-600);">服务周期</span>
+          <span>30 天</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-top:1px solid var(--gray-100);margin-top:4px;padding-top:10px;">
+          <span style="font-weight:700;">合计</span>
+          <span style="font-size:18px;font-weight:800;color:var(--brand);">¥29.00</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-bottom:12px;line-height:1.6;">
+        💡 点击确认即表示同意《服务协议》，支付后自动开通 Pro 权益。
+      </div>
+      <button class="pro-btn" onclick="confirmPayment()">💰 确认支付 ¥29/月</button>
+      <div class="pro-skip"><a onclick="closePro()">取消</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 导出进度遮罩 ============ -->
+<div class="export-progress" id="exportOverlay">
+  <div class="export-card">
+    <div class="spinner"></div>
+    <div class="export-text">正在生成报告...</div>
+    <div class="export-sub">请稍候</div>
+  </div>
+</div>
+
+<!-- ============ 新建文档弹窗 ============ -->
+<div class="newdoc-overlay" id="newdocOverlay" onclick="if(event.target===this)hideNewDoc()">
+  <div class="newdoc-card">
+    <div class="newdoc-header">
+      <h2>📄 新建文档</h2>
+      <p>选择文档类型，系统将自动匹配对应的功能模块</p>
+    </div>
+    <div class="newdoc-body">
+      <div class="newdoc-option" onclick="createDocument('polish')">
+        <div class="newdoc-option-icon" style="background:var(--clarity-bg);color:var(--clarity);">✍️</div>
+        <div class="newdoc-option-info">
+          <div class="newdoc-option-title">学术语言润色</div>
+          <div class="newdoc-option-desc">语法纠错、措辞精炼、术语统一、句式优化</div>
+        </div>
+        <div class="newdoc-option-arrow">→</div>
+      </div>
+      <div class="newdoc-option" onclick="createDocument('logic')">
+        <div class="newdoc-option-icon" style="background:var(--term-bg);color:var(--term);">🧩</div>
+        <div class="newdoc-option-info">
+          <div class="newdoc-option-title">逻辑优化</div>
+          <div class="newdoc-option-desc">论证层级梳理、段落衔接、逻辑断层标注</div>
+        </div>
+        <div class="newdoc-option-arrow">→</div>
+      </div>
+      <div class="newdoc-option" onclick="createDocument('aigc')">
+        <div class="newdoc-option-icon" style="background:var(--danger-bg);color:var(--danger);">🛡️</div>
+        <div class="newdoc-option-info">
+          <div class="newdoc-option-title">AIGC 检测</div>
+          <div class="newdoc-option-desc">段落级 AI 率检测、高亮标注、降AI改写</div>
+        </div>
+        <div class="newdoc-option-arrow">→</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 隐藏文件上传 ============ -->
+<input type="file" id="wordFileInput" accept=".docx" style="display:none" onchange="handleWordImport(event)" />
+
+<!-- SVG 渐变定义 -->
+<svg style="position:absolute;width:0;height:0;">
+  <defs>
+    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0D7377"/>
+      <stop offset="100%" stop-color="#C99A3E"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+
+<!-- ============ SVG 图标精灵 ============ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+  <symbol id="i-logic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="12" r="2.5"/><path d="M8.5 6h3.5a4 4 0 0 1 4 4M8.5 18h3.5a4 4 0 0 0 4-4"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9zM8 5H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1h-2"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2 7 7 2-7 2-2 7-2-7-7-2 7-2 2-7z"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M4 12h16"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 6.5L21 10l-5 4.5L17.5 21 12 17.5 6.5 21 8 14.5 3 10l6.5-.5z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 1 5 12c-1 1-2 2-2 4H9c0-2-1-3-2-4a7 7 0 0 1 5-12z"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v6M9 8h6l2 4-4-1v7"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8M21 3v5h-5M21 12a9 9 0 0 1-15 6.7L3 16M3 21v-5h5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6l-12 12"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.1a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1h-.1a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5v-.1a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1h.1a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-save" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></symbol>
+  <symbol id="i-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="i-word" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5"/><path d="M9 13l2 3 2-3M9 17h6"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="16" r="1"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+  <symbol id="i-delete" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+  <symbol id="i-rename" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
+</svg>
+
+<script src="js/api-client.js"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/ai-engine.js"></script>
+<script src="js/docs.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/polish.js"></script>
+<script src="js/logic.js"></script>
+<script src="js/aigc.js"></script>
+<script src="js/agent.js"></script>
+<script src="js/main.js"></script>
+<script src="js/emoji-icons.js"></script>
+</body>
+</html>

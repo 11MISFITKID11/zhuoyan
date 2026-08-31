@@ -1,0 +1,24 @@
+secret.json
+.enc_key
+data.db
+data.db.tmp
+data.db-wal
+data.db-shm
+data.json
+data.json.tmp
+docx_raw.xml
+node_modules/
+.npm-cache/
+.vscode/
+
+# 环境变量（含密钥，绝不能提交）
+.env
+.env.*
+!.env.example
+
+# 日志与覆盖率
+logs/
+coverage/
+
+# 拆分备份
+index.html.bak

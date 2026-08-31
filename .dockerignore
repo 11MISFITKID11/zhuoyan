@@ -1,0 +1,23 @@
+# 依赖与构建产物
+node_modules/
+.npm-cache/
+coverage/
+
+# 版本控制与 IDE
+.git/
+.gitignore
+.vscode/
+*.bak
+
+# 密钥与敏感数据（不打包进镜像）
+.env
+.env.*
+!.env.example
+secret.json
+.enc_key
+data.db*
+docx_raw.xml
+
+# 日志
+logs/
+*.log
