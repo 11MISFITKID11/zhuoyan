@@ -17,7 +17,7 @@
  */
 
 const logger = require('../utils/logger');
-const { resolveProviderInfo } = require('../utils/provider');
+const { resolveProviderInfo } = require('../utils/providerResolver');
 const { getUserProfile, saveUserProfile } = require('../db');
 
 // ============================================================

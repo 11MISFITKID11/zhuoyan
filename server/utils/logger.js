@@ -36,14 +36,14 @@ const logger = winston.createLogger({
     }),
     // 错误日志文件
     new winston.transports.File({
-      filename: path.join(config.rootDir, 'logs', 'error.log'),
+      filename: path.join(config.logDir, 'error.log'),
       level: 'error',
       maxsize: 5 * 1024 * 1024, // 5MB
       maxFiles: 3
     }),
     // 综合日志文件
     new winston.transports.File({
-      filename: path.join(config.rootDir, 'logs', 'combined.log'),
+      filename: path.join(config.logDir, 'combined.log'),
       maxsize: 5 * 1024 * 1024,
       maxFiles: 5
     })

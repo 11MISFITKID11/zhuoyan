@@ -7,17 +7,17 @@ coverage/
 .git/
 .gitignore
 .vscode/
+.workbuddy/
 *.bak
 
-# 密钥与敏感数据（不打包进镜像）
+# 环境变量与密钥（不打包进镜像）
 .env
 .env.*
 !.env.example
 secret.json
 .enc_key
-data.db*
-docx_raw.xml
 
-# 日志
+# 运行数据（数据库与日志不打包）
+data/
 logs/
 *.log

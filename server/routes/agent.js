@@ -8,7 +8,7 @@ const quotaMiddleware = require('../middleware/quota');
 const { consumeQuota } = require('../middleware/quota');
 const { apiLimiter } = require('../middleware/rateLimit');
 const { llmRequest } = require('../utils/llm');
-const { resolveProviderInfo } = require('../utils/provider');
+const { resolveProviderInfo } = require('../utils/providerResolver');
 const logger = require('../utils/logger');
 const { FullPaperAgent } = require('../agents/fullPaperAgent');
 

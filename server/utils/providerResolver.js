@@ -1,9 +1,12 @@
 /**
- * 琢言 · Provider 解析工具
+ * 琢言 · Provider 解析工具（providerResolver）
  *
  * 统一的 API Key → Provider / Model 解析逻辑：
  *   1. 如果传入了 rawApiKey（用户临时提供的 Key），直接使用并自动检测 Provider
  *   2. 否则从数据库查询用户的加密 API Key，解密后检测 Provider
+ *
+ * 注意：与 server/providers.js（供应商定义表）不同，
+ *       本文件是"运行时解析行为"，providers.js 是"供应商数据/定义"。
  */
 
 const { sqlGet } = require('../db');
