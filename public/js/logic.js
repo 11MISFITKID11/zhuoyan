@@ -27,7 +27,9 @@ function clearLogic() {
 
 async function startLogic() {
   // ====== FUTURE: 此处替换为 AIEngine.analyzeLogic() 的 API 调用 ======
-  const input = document.getElementById('logicInput');
+  // 若处于优化预览态（textarea 被 doc-page 移出 DOM），先基于原文本重建输入框
+  let input = document.getElementById('logicInput');
+  if (!input) input = restoreLogicInput(logicState.originalText || '');
   if (!input) return;
   const text = input.value.trim();
   if (!text) { showToast('请先输入文本', 'error'); return; }
@@ -146,7 +148,8 @@ function renderLogicIssues() {
 }
 
 async function optimizeLogic() {
-  const input = document.getElementById('logicInput');
+  let input = document.getElementById('logicInput');
+  if (!input) input = restoreLogicInput(logicState.originalText || '');
   if (!input) return;
   const text = input.value.trim();
   if (!text) { showToast('没有可优化的文本', 'error'); return; }
@@ -243,18 +246,34 @@ async function optimizeLogic() {
   showToast('结构优化完成，请预览后接受', 'success');
 }
 
+// 将编辑器区重建为可编辑输入框。
+// 注意：优化预览（doc-page）会用 innerHTML 把原 textarea 移出 DOM，
+// 此时 getElementById('logicInput') 为 null——接受优化必须重建节点而非引用旧节点。
+function restoreLogicInput(value) {
+  const editor = document.getElementById('logicEditor');
+  if (!editor) return null;
+  const ta = document.createElement('textarea');
+  ta.className = 'doc-input';
+  ta.id = 'logicInput';
+  ta.placeholder = '在此粘贴论文正文...';
+  ta.value = value || '';
+  ta.addEventListener('input', () => updateWordCount('logicInput', 'logicWordCount'));
+  editor.innerHTML = '';
+  editor.appendChild(ta);
+  updateWordCount('logicInput', 'logicWordCount');
+  return ta;
+}
+
 async function acceptLogicOptimize() {
-  const input = document.getElementById('logicInput');
-  if (!input || !logicState.optimizedText) return;
+  if (!logicState.optimizedText) return;
   // 采纳才计费：接受修改 → 按采纳文本字数计入额度；额度不足则拦截并引导升级 Pro
   if (!(await adoptQuota(logicState.optimizedText.length))) return;
-  input.value = logicState.optimizedText;
-  updateWordCount('logicInput', 'logicWordCount');
+  // 重建输入框并填入优化结果（textarea 此前可能已被 doc-page 预览移出 DOM）
+  const input = restoreLogicInput(logicState.optimizedText);
+  if (!input) return;
+  logicState.originalText = logicState.optimizedText;
   document.getElementById('btnAcceptLogic').style.display = 'none';
   document.getElementById('btnOptimizeLogic').style.display = 'none';
-  // 恢复编辑器为 textarea 模式
-  document.getElementById('logicEditor').innerHTML = '';
-  document.getElementById('logicEditor').appendChild(input);
   input.focus();
   showToast('已应用优化结果', 'success');
 }

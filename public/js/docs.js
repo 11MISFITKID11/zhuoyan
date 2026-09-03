@@ -216,7 +216,8 @@ async function saveAsDoc(module) {
   const input = document.getElementById(inputMap[module]);
   const text = module === 'aigc'
     ? ((input && input.value.trim()) ? input.value : (aigcOriginalText || ''))
-    : (module === 'polish' ? (polishState.currentText || (input ? input.value : '')) : (input ? input.value : ''));
+    : (module === 'polish' ? (polishState.currentText || (input ? input.value : ''))
+      : ((input && input.value.trim()) ? input.value : (logicState.optimizedText || '')));
   if (!text.trim()) { showToast('没有内容可保存', 'error'); return; }
 
   if (currentDocId) {
@@ -264,9 +265,12 @@ function exportDoc(module) {
   const labels = { polish: '润色', logic: '逻辑', aigc: 'AIGC检测' };
   const inputMap = { polish: 'polishInput', logic: 'logicInput', aigc: 'aigcInput' };
   const input = document.getElementById(inputMap[module]);
-  if (!input || !input.value.trim()) { showToast('没有内容可导出', 'error'); return; }
+  // 逻辑优化预览态（doc-page）textarea 已移出 DOM：兜底取优化结果
+  const text = module === 'logic'
+    ? ((input && input.value.trim()) ? input.value : (logicState.optimizedText || ''))
+    : (module === 'polish' ? (polishState.currentText || (input ? input.value : '')) : (input ? input.value : ''));
+  if (!text.trim()) { showToast('没有内容可导出', 'error'); return; }
 
-  const text = module === 'polish' ? (polishState.currentText || input.value) : input.value;
   const date = new Date();
   const filename = '琢言_' + labels[module] + '_' + date.getFullYear() +
     String(date.getMonth()+1).padStart(2,'0') + String(date.getDate()).padStart(2,'0') + '.txt';
