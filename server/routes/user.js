@@ -50,9 +50,12 @@ router.get('/usage', authMiddleware, (req, res) => {
 });
 
 /**
- * POST /api/usage/adopt — 采纳/撤销采纳 AI 修改后调整每日额度
- * 配额语义：分析/生成过程不扣费，只有「接受修改」才按采纳内容的字数计入；
- * 撤销采纳（undo）传负数退回。免费用户超出每日限额返回 429 → 只能升级 Pro。
+ * POST /api/usage/adopt — 每日额度入账统一入口
+ * 两种消费方式共用：
+ *   - 采纳式（润色/逻辑/AIGC/降AI改写）：分析/生成不扣费，「接受修改」才按采纳内容字数
+ *     计入（delta 正）；撤销采纳（undo）传负数退回（delta 负）。
+ *   - 完成式（全文智能分析）：分析成功完成后按「导入文本字数」计入（delta = text.length）。
+ * 免费用户超出每日限额返回 429 → 只能升级 Pro；Pro 会员不计数直接放行。
  */
 router.post('/usage/adopt', authMiddleware, (req, res) => {
   const delta = Math.trunc(Number(req.body && req.body.delta));

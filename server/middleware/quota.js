@@ -1,16 +1,21 @@
 /**
  * 琢言 · 配额中间件
  *
- * 配额口径（与左下角显示完全一致）：免费每日「可采纳的 AI 修改字数」上限 FREE_QUOTA。
- *   - 分析 / 生成过程（润色建议、逻辑分析、AIGC 检测、降AI改写、全文分析）不消耗额度，
- *     只有用户真正「接受 / 采纳」AI 产出时才按采纳内容的字数计入 usageCount
- *     （统一走 POST /api/usage/adopt，撤销采纳传负数退回）；
- *   - 因此「左下角显示 used/limit、前端预检、后端拦截、实际扣减」四者一致，
- *     且满足产品语义：做了分析但未采纳修改 → 额度不变；采纳修改 → 额度增加。
+ * 配额口径（与左下角显示完全一致）：免费每日「可计入的 AI 字数」上限 FREE_QUOTA。
+ * 按功能消费点分两类，共用 usageCount/usageDate 同一账户、同一下左角显示：
+ *   A. 采纳式（润色建议、逻辑分析、AIGC 检测、降AI改写）——分析/生成过程不消耗额度，
+ *      只有用户真正「接受 / 采纳」AI 产出时才按采纳内容的字数计入 usageCount
+ *      （统一走 POST /api/usage/adopt，撤销采纳传负数退回）；
+ *      语义：做了分析但未采纳修改 → 额度不变；采纳修改 → 额度增加。
+ *   B. 完成式（全文智能分析）——产出是评分/诊断/综合报告，没有「采纳」环节，
+ *      分析完成即按「导入文本字数」计入 usageCount（同样走 POST /api/usage/adopt）。
+ * 因此「左下角显示 used/limit、前端预检、后端拦截、实际入账」四者一致。
  * 真实 token 消耗仍由 llm.js/langchainClient.js 记入 llm_calls 审计表（成本分析用）。
  *
- * quotaMiddleware：免费用户已达上限（used >= limit）时兜底拦截（429 QUOTA_EXCEEDED），
- * 不按「本次输入字数」预扣——因为生成过程本身不再计费。
+ * quotaMiddleware：免费用户兜底拦截（429 QUOTA_EXCEEDED）——
+ *   - 已达上限（used >= limit）：任何消费都拒绝；
+ *   - 声明了 req.quotaNeeded（完成式消费的预计入账字数，由全文分析路由设置）时，
+ *     若 剩余额度 < quotaNeeded 也直接拒绝——避免白跑一次全文分析后入账失败。
  * 升级 Pro（plan='pro'）后不受限制。
  */
 
@@ -27,10 +32,19 @@ function quotaMiddleware(req, res, next) {
     if (!user || user.plan === 'pro') return next();
 
     const used = (user.usageDate === todayStr()) ? (user.usageCount || 0) : 0;
+    // 1) 已达每日上限 → 拒绝任何消费
     if (used >= config.freeQuota) {
       return res.status(429).json({
         error: 'QUOTA_EXCEEDED',
         message: `今日免费额度已用完（${config.freeQuota.toLocaleString()} 字），请升级 Pro`
+      });
+    }
+    // 2) 完成式消费（全文分析）：本次预计按文本字数入账，剩余额度不足则提前拒绝
+    const needed = Math.trunc(Number(req.quotaNeeded) || 0);
+    if (needed > 0 && used + needed > config.freeQuota) {
+      return res.status(429).json({
+        error: 'QUOTA_EXCEEDED',
+        message: `今日免费额度不足（本次全文分析约需 ${needed.toLocaleString()} 字，剩余 ${Math.max(0, config.freeQuota - used).toLocaleString()} 字），请升级 Pro`
       });
     }
     next();

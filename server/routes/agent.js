@@ -15,9 +15,20 @@ const router = express.Router();
 
 /**
  * POST /api/agent/analyze
- * 全文智能分析 Agent（SSE 流式进度 + 客户端取消 + 仅审计真实 token，不按请求计费）
+ * 全文智能分析 Agent（SSE 流式进度 + 客户端取消 + 配额「完成式消费」）：
+ * 分析/生成过程不计费，分析成功完成后按「导入文本字数」计入每日额度（free）；
+ * 路由通过 req.quotaNeeded 声明预计字数，quotaMiddleware 据此做剩余额度预检。
  */
-router.post('/analyze', authMiddleware, quotaMiddleware, apiLimiter, async (req, res) => {
+router.post('/analyze',
+  authMiddleware,
+  // 声明完成式配额消耗：本次分析完成后将按导入文本字数入账
+  (req, res, next) => {
+    req.quotaNeeded = String((req.body && req.body.text) || '').length;
+    next();
+  },
+  quotaMiddleware,
+  apiLimiter,
+  async (req, res) => {
   try {
     const { text, customEndpoint, rawApiKey, model } = req.body;
     if (!text) return res.status(400).json({ error: '缺少文本' });

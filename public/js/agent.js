@@ -34,11 +34,18 @@ async function startAgentAnalysis() {
   const text = input.value.trim();
   if (!text) { showToast('请输入论文文本', 'error'); return; }
   if (text.length < 50) { showToast('文本过短，请输入至少 50 字', 'error'); return; }
-  // 免费额度预检：仅「已达上限」才拦截（分析过程本身不扣费，额度只随「采纳修改」累计；后端仍兜底 429）
-  if (getToken() && quotaCache.plan !== 'pro' && (quotaCache.used || 0) >= (quotaCache.limit || 3000)) {
-    showToast('今日免费额度已用完（每日 ' + (quotaCache.limit || 3000).toLocaleString() + ' 字），请升级 Pro', 'error');
-    showProUpgrade();
-    return;
+  // 免费额度预检：全文分析为「完成式计费」——分析完成后按「导入文本字数」计入每日限额，
+  // 故要求 剩余额度 ≥ 本次文本长度；不足直接拦截（后端 quotaMiddleware 校验 req.quotaNeeded 双保险）。
+  // Pro 会员不计数、无限制，直接放行。
+  if (getToken() && quotaCache.plan !== 'pro') {
+    const used = quotaCache.used || 0;
+    const limit = quotaCache.limit || 3000;
+    if (used + text.length > limit) {
+      const remain = Math.max(0, limit - used);
+      showToast('免费额度不足：本次全文分析约消耗 ' + text.length.toLocaleString() + ' 字，今日剩余 ' + remain.toLocaleString() + ' 字，请升级 Pro', 'error');
+      showProUpgrade();
+      return;
+    }
   }
 
   const btn = document.getElementById('btnStartAgent');
@@ -115,7 +122,10 @@ async function startAgentAnalysis() {
     statusEl.textContent = '● 分析完成 ✓';
     statusEl.style.color = 'var(--success)';
     showToast(`分析完成！综合评分: ${result.overallScore}/10`, 'success');
-    refreshQuota(); // 同步左下角额度显示
+    // 完成式计费：分析完成即按「导入文本字数」计入左下角限额 ——
+    // adoptQuota 对 free 用户本地乐观 used += 文本字数并即时渲染（完成即匹配限额），
+    // 接口返回后校准；Pro 不计数（左下角保持「无限」）。
+    await adoptQuota(text.length);
     renderAgentPanel(agentState.currentPanel || 'overview');
   } catch (err) {
     agentState.analyzing = false;
