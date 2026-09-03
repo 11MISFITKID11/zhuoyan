@@ -12,6 +12,7 @@ const quotaMiddleware = require('../middleware/quota');
 const { consumeQuota } = require('../middleware/quota');
 const { apiLimiter } = require('../middleware/rateLimit');
 const { llmRequest } = require('../utils/llm');
+const { textRequest } = require('../utils/langchainClient');
 const { resolveProviderInfo } = require('../utils/providerResolver');
 const prompts = require('../prompts');
 const logger = require('../utils/logger');
@@ -104,29 +105,7 @@ router.post('/polish', authMiddleware, quotaMiddleware, apiLimiter, async (req, 
     const provider = info.provider;
     const model = modelName || info.model;
 
-    const systemPrompt = `你是一位中文学术写作专家。分析用户输入的中文学术文本，找出以下四类问题：
-1. 语法错误（搭配不当、成分残缺、句式杂糅）
-2. 清晰度问题（口语化、冗余、模糊表达）
-3. 术语不一致（同一概念多种表述）
-4. 写作风格问题（不够正式、不够简洁）
-
-请返回 JSON 格式的数组（不要包含任何其他文字），每项包含：
-{
-  "id": "s_序号",
-  "type": "grammar | clarity | term | style",
-  "typeName": "语法 | 清晰度 | 术语 | 风格",
-  "severity": "高 | 中 | 低",
-  "old": "原文片段",
-  "new": "建议修改的文本",
-  "reason": "修改理由（引用学术规范或语法规则）",
-  "anchor": "原文中用于定位的片段（必须在原文中存在，用于高亮定位）"
-}
-
-注意：
-- 如果不确定问题类型，优先使用 clarity
-- anchor 必须是原文中原文中存在的连续字符串
-- 如果文本没有明显问题，返回空数组 []
-- severity 高/中/低 分别对应 严重/中等/轻微`;
+    const systemPrompt = prompts.POLISH_SYSTEM;
 
     const signal = makeAbortSignal(req, res);
     const acceptSSE = req.headers.accept === 'text/event-stream';
@@ -228,18 +207,7 @@ router.post('/logic/optimize', authMiddleware, quotaMiddleware, apiLimiter, asyn
     const provider = info.provider;
     const model = modelName || info.model;
 
-    const systemPrompt = `你是一位学术写作与逻辑优化专家。用户会给你一段学术文本，你需要重构其论证结构，使其逻辑更清晰、更有说服力。
-
-要求：
-1. 识别原文的核心论点和论据
-2. 按「论点 → 论据支撑 → 结论」的框架重新组织
-3. 补充过渡句和逻辑连接词，消除逻辑跳跃
-4. 保留所有原文的核心观点、专业术语和数据
-5. 不要添加原文没有的新观点或数据
-
-输出格式：直接返回优化后的完整文本（纯文本，不要任何JSON包装）。使用【核心论点】【论据支撑】【改进方案】【结论】等标题来标示各部分。
-
-注意：输出必须是纯文本，不要包含JSON标记或代码块。`;
+    const systemPrompt = prompts.LOGIC_OPTIMIZE_SYSTEM;
 
     const signal = makeAbortSignal(req, res);
     const acceptSSE = req.headers.accept === 'text/event-stream';
@@ -335,17 +303,11 @@ router.post('/aigc/rewrite', authMiddleware, quotaMiddleware, apiLimiter, async 
     const provider = info.provider;
     const model = modelName || info.model;
 
-    const systemPrompt = `你是一位学术写作专家。将以下文本改写得更像人类写作，同时严格遵循以下要求：
+    const systemPrompt = prompts.AIGC_REWRITE_SYSTEM;
 
-1. 保留所有学术术语和专业概念不变
-2. 保留原文的核心观点和论证逻辑
-3. 使语言更自然、句式更多样化
-4. 适当调整句式结构，避免模板化表达
-5. 保持学术写作的正式风格
-6. 不要添加原文没有的新信息
-7. 改写后的篇幅应与原文相近
-
-直接返回改写后的文本，不要包含任何其他说明或格式。`;
+    // LangChain 通道：本条路由经 langchainClient.textRequest 走
+    // ChatPromptTemplate.pipe(ChatOpenAI) 的 LCEL 链（anthropic 或 DISABLE_LANGCHAIN=1 时自动回退原网关）
+    const llmCall = (opts) => textRequest(provider, info.apiKey, model, systemPrompt, text, 0.5, customEndpoint, req.user.id, opts);
 
     const signal = makeAbortSignal(req, res);
     const acceptSSE = req.headers.accept === 'text/event-stream';
@@ -353,7 +315,7 @@ router.post('/aigc/rewrite', authMiddleware, quotaMiddleware, apiLimiter, async 
     if (acceptSSE) {
       startSSE(res);
       try {
-        const result = await llmRequest(provider, info.apiKey, model, systemPrompt, text, 0.5, customEndpoint, req.user.id, {
+        const result = await llmCall({
           stream: true, signal,
           onDelta: (d) => res.write(`data: ${JSON.stringify({ type: 'delta', content: d })}\n\n`)
         });
@@ -367,7 +329,7 @@ router.post('/aigc/rewrite', authMiddleware, quotaMiddleware, apiLimiter, async 
       return;
     }
 
-    const result = await llmRequest(provider, info.apiKey, model, systemPrompt, text, 0.5, customEndpoint, req.user.id, { signal });
+    const result = await llmCall({ signal });
     consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
     res.json({ rewritten: result.content.trim(), elapsed: result.elapsed, usage: result.usage });
   } catch (err) {

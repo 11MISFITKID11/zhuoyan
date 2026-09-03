@@ -62,8 +62,8 @@ zhuoyan/
 │  ├─ middleware/           # 横切中间件（认证 / 配额 / 限流）
 │  ├─ routes/               # 路由层（Controller：auth/docs/ai/agent/user/system）
 │  ├─ agents/               # Agent 编排（chain.js 流水线 + fullPaperAgent 全文分析）
-│  └─ utils/                # 工具层（LLM 网关 / 加解密 / 日志 / 解析器等）
-├─ tests/                   # Jest 单元测试（30 用例：核心逻辑 + Chain 流水线）
+│  └─ utils/                # 工具层（LLM 网关 / LangChain 通道 / 加解密 / 日志等）
+├─ tests/                   # Jest 单元测试（36 用例：核心逻辑 + Chain/LangChain 通道）
 ├─ docs/                    # 项目文档
 ├─ data/                    # 运行数据目录（不入库、不打镜像）
 │  ├─ data.db               # SQLite 数据库（WAL 模式）

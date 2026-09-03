@@ -23,7 +23,7 @@
 | 证据 | 位置 | 说明 |
 |---|---|---|
 | CI 徽章常绿 | `README.md` 顶部 | GitHub Actions 自动生成 |
-| 30/30 测试通过 | `npm test` 现场跑 | 覆盖 db/加密/chunking/供应商/Chain 等纯逻辑，不依赖真模型 |
+| 36/36 测试通过 | `npm test` 现场跑 | 覆盖 db/加密/chunking/供应商/Chain/LangChain 通道等纯逻辑，不依赖真模型 |
 | ESLint 0 error | `npm run lint` | 扁平配置 `eslint.config.js` |
 | 生产冒烟 | 本地 `NODE_ENV=production` 启动 | `/health`、首页、写库、日志均验证过 |
 | 数据安全 | `data/`（gitignore + dockerignore） | SQLite、JWT Secret、API Key 密钥、日志与源码物理隔离 |
@@ -36,7 +36,7 @@
 | # | 验收维度 | 落地位置 | 讲解口径 |
 |---|---|---|---|
 | 1 | 提示词模板使用 | `server/prompts.js` | "全部 system 提示词集中成模板库，函数式变量注入；路由/Agent 只引用不内嵌——等价 LangChain PromptTemplate 的模板与渲染分离" |
-| 2 | LangChain / Chain | `server/agents/chain.js` + `fullPaperAgent.js` | "自研轻量 Chain（Pipeline）：声明式步骤 + 共享上下文贯穿 + 必需步骤失败中止 + 可降级步骤 + 进度回调；全文 Agent 的 结构→诊断→报告 三步即一条 RunnableSequence" |
+| 2 | LangChain / Chain | `server/utils/langchainClient.js` + `server/agents/chain.js` + `fullPaperAgent.js` | **双档 Chain**：①单步链——`@langchain/openai` 已接入（依赖清单可见），`ChatPromptTemplate.pipe(ChatOpenAI)` 组成 RunnableSequence，真实驱动 `/api/aigc/rewrite` 降 AI 改写；②多步编排——全文 Agent 的 结构→诊断→报告 三步走自研 Pipeline（声明式步骤 + 失败中止/降级 + 进度回调）。答口径："官方 LangChain 管单步标准链，自研 Pipeline 管多步复杂编排，各有测试守护" |
 | 3 | 向量数据库 | （未内置，见下文扩展方向） | "当前无检索需求故未引入；架构上预留了切块(chunking)+DB 抽象，若做知识库可平滑接入 sqlite-vec/Chroma" |
 | 4 | RAG / Agent 开发 | `fullPaperAgent.js`（六步任务分解→执行→反思→汇总）、`routes/agent.js`（SSE 进度） | "Agent：任务规划→分步执行→审稿人反思→综合打分，长文走分块 Map-Reduce；RAG 为扩展方向" |
 | 5 | 前后端框架与部署 | 后端 Express + 前端原生 ESM MVC + Docker + CI | "后端框架达标；前端无框架但按 MVC 分层（state=Model/DOM=View/页签 JS=Controller），零构建选型；部署见 Dockerfile + Actions" |

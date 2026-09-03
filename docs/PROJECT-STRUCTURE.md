@@ -163,19 +163,22 @@ index.js ──► app.js ──► routes/(控制器)
 | `agents/chain.js` | **Chain 流水线**：自研轻量链式编排（Pipeline），声明式步骤 + 上下文贯穿 + required 中止/非 required 降级 + 进度回调，对标 LangChain RunnableSequence |
 | `agents/fullPaperAgent.js` | **Agent 核心**：以 Chain 三步流水线（结构→综合诊断→综合报告）驱动全文分析，含反思循环（审稿人→改进）、跨文档用户画像、长文自动分块 + 结果合并 |
 | `utils/llm.js` | **LLM 网关**：统一 OpenAI 兼容调用、SSE 流式、JSON 模式、429/5xx 指数退避重试、调用审计入库、内存调试日志 |
+| `utils/langchainClient.js` | **LangChain 通道**：与 llmRequest 同签名的 textRequest，走 `ChatPromptTemplate.pipe(ChatOpenAI)` 的 LCEL 链（baseURL 复用网关解析）；anthropic / `DISABLE_LANGCHAIN=1` 自动回退原网关；`/api/aigc/rewrite` 已切此通道 |
 | `utils/crypto.js` | API Key AES 加解密 + 掩码显示（密钥存 `data/.enc_key`） |
 | `utils/logger.js` | Winston 日志：错误/全量分开落盘到 `data/logs/` |
 | `utils/cache.js` | NodeCache 内存缓存（文档列表等），带容量上限 |
 
-### 3.4 `tests/` 单元测试（Jest，24 条）
+### 3.4 `tests/` 单元测试（Jest，36 条）
 
 | 文件 | 测什么 |
 |------|--------|
 | `chunking.test.js` | 长文分块逻辑与多块结果合并（Agent 核心算法） |
 | `providers.test.js` | 供应商识别 `autoDetectProvider` 各种 Key 形态 |
 | `crypto.test.js` | API Key 加解密往返、掩码格式 |
+| `chain.test.js` | Chain 流水线：顺序执行 / required 中止 / 非 required 降级 / 上下文贯穿 / 进度回调 |
+| `langchain.test.js` | LangChain 通道：RunnableSequence 非流式/SSE 流式调用、usage 映射、anthropic 回退（mock fetch，不触网） |
 
-> CI 门槛：`npm run lint` 0 error + `npm test` 24/24 + 覆盖率 functions ≥ 30%。
+> CI 门槛：`npm run lint` 0 error + `npm test` 36/36 + 覆盖率 functions ≥ 30%。
 
 ### 3.5 `data/` 运行数据（不入库）
 
@@ -198,8 +201,8 @@ index.js ──► app.js ──► routes/(控制器)
 3. 被问"AI Key 怎么存" → 讲 `utils/crypto.js` AES 加密 + `data/.enc_key` + `providerResolver.js` 运行时解密。
 4. 被问"多模型怎么支持" → 讲 `providers.js`（定义表）+ `utils/llm.js`（网关，统一 OpenAI 兼容协议）。
 5. 被问"怎么防超卖/防刷" → 讲 `middleware/quota.js` + `rateLimit.js` + `llm_calls` 审计表按真实 token 计费。
-6. 被问"质量保障" → 打开 GitHub Actions CI：lint + 30 测试 + 覆盖率门禁，现场跑 `npm test`。
-7. 被问"提示词/Chain 怎么组织" → 讲 `server/prompts.js`（模板集中 + 变量注入，对标 PromptTemplate）与 `server/agents/chain.js`（Pipeline 声明式步骤 + 失败降级，对标 RunnableSequence）。
+6. 被问"质量保障" → 打开 GitHub Actions CI：lint + 36 测试 + 覆盖率门禁，现场跑 `npm test`。
+7. 被问"提示词/Chain 怎么组织" → 讲 `server/prompts.js`（模板集中 + 变量注入，对标 PromptTemplate）、`server/utils/langchainClient.js`（真实 LangChain LCEL 链驱动降 AI 改写）与 `server/agents/chain.js`（Pipeline 声明式步骤 + 失败降级，对标 RunnableSequence）——**单步链用官方 LangChain，多步编排用自研 Pipeline，两档可分别对答**。
 8. 被问"和 Java 项目有什么区别" → 见《技术栈对比》：**思想同构**（分层/IoC 拆分为模块化 require/中间件≈拦截器），差异在规模与生态，本地小工具用 Node 更轻量，**无需换栈**。
 
 ---

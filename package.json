@@ -10,6 +10,8 @@
     "lint": "eslint server tests public/js"
   },
   "dependencies": {
+    "@langchain/core": "^1.2.9",
+    "@langchain/openai": "^1.5.11",
     "bcryptjs": "^2.4.3",
     "better-sqlite3": "^13.0.3",
     "compression": "^1.8.1",
