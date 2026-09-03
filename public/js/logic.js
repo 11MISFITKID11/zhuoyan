@@ -150,19 +150,37 @@ async function optimizeLogic() {
   document.getElementById('logicStatus').textContent = '● 优化中...';
   document.getElementById('logicStatus').style.color = 'var(--warning)';
 
-  // 流式显示优化结果（打字机效果），完成后用完整结果渲染
+  // 流式显示优化结果（打字机效果），完成后用完整结果渲染。
+  // 性能：固定内容节点 + requestAnimationFrame 节流，textContent 增量写入，
+  // 避免每个网络增量都整页 innerHTML 重渲染（O(n²) 卡顿）。
   let streamText = '';
+  let rafPending = false;
+  const editor = document.getElementById('logicEditor');
+  if (editor) {
+    editor.innerHTML = '<div class="doc-page"><div class="doc-page-title">优化后的论证结构</div>' +
+      '<div class="doc-page-content" id="logicStreamBody" style="white-space:pre-wrap;word-break:break-word;"></div></div>';
+  }
+  const flushStream = () => {
+    rafPending = false;
+    const bodyEl = document.getElementById('logicStreamBody');
+    if (bodyEl) {
+      bodyEl.textContent = streamText;
+      bodyEl.scrollTop = bodyEl.scrollHeight; // 容器自身可滚时跟随末尾
+    }
+  };
   logicState.optimizedText = await AIEngine.optimizeLogic(text, {
     onDelta: (d) => {
       streamText += d;
-      const editor = document.getElementById('logicEditor');
-      if (editor) editor.innerHTML = '<div class="doc-page"><div class="doc-page-title">优化后的论证结构</div><div class="doc-page-content">' + esc(streamText) + '</div></div>';
+      if (!rafPending) {
+        rafPending = true;
+        requestAnimationFrame(flushStream);
+      }
     }
   });
 
   // 在编辑器中显示优化结果
-  const editor = document.getElementById('logicEditor');
-  editor.innerHTML = '<div class="doc-page"><div class="doc-page-title">优化后的论证结构</div><div class="doc-page-content">' +
+  if (editor) {
+    editor.innerHTML = '<div class="doc-page"><div class="doc-page-title">优化后的论证结构</div><div class="doc-page-content">' +
     logicState.optimizedText.split('\n\n').filter(p => p.trim()).map(p => {
       const t = p.trim();
       if (t.startsWith('【')) {
@@ -175,6 +193,7 @@ async function optimizeLogic() {
       }
       return '<p style="margin-bottom:12px;">' + esc(t) + '</p>';
     }).join('') + '</div></div>';
+  }
 
   // 更新侧边面板
   panel.innerHTML =

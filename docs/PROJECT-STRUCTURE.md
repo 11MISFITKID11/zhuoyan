@@ -80,7 +80,7 @@ index.js ──► app.js ──► routes/(控制器)
 | `.dockerignore` | 构建镜像时排除 data/、node_modules 等 | "运行数据不打进镜像" |
 | `.gitignore` | 不入库清单（data/、node_modules/、.env） | "源码与运行数据彻底分离" |
 | `README.md` | 项目说明（含目录树） | "老师先看这个就能懂全貌" |
-| `.github/workflows/ci.yml` | CI：lint + 24 条测试 + 覆盖率门槛 | "每次 push 自动跑质量门禁" |
+| `.github/workflows/ci.yml` | CI：lint + 30 条测试 + 覆盖率门槛 | "每次 push 自动跑质量门禁" |
 
 ### 3.2 `public/` 前端（无框架单页应用）
 
@@ -111,6 +111,12 @@ index.js ──► app.js ──► routes/(控制器)
 | `docs.js` | 文档管理：历史列表、本地/云端切换、导出 | 数据 |
 
 > 讲解要点：**无打包器**（不依赖 webpack/vite），模块靠 `index.html` 里 script 顺序加载、以全局命名空间协作——这是刻意为之，避免给"验机部署"增加构建步骤，任何静态服务器都能直接跑。
+
+**概念映射（被问"没有用 React/Vue 算不算前端框架"时这样答）**
+
+> 本项目是无框架的原生 ES Modules 单页应用，但**按 MVC 思想分层**：
+> Model = `state.js`（全局状态）+ `api-client.js`（数据请求）｜ View = `index.html` 的 DOM + `css/`｜ Controller = 各页签模块（`auth.js`/`polish.js`/`logic.js`/`aigc.js`/`agent.js`）
+> `ai-engine.js` 相当于 Service 层（业务编排 + SSE 解析）。选型理由：本地化工具零构建、可 PWA 离线、验机演示无环境依赖；如需演进可平滑迁移 Vue/React（Controller 换组件、Model/Service 复用）。
 
 ### 3.3 `server/` 后端
 
@@ -153,7 +159,9 @@ index.js ──► app.js ──► routes/(控制器)
 
 | 文件 | 用途 |
 |------|------|
-| `agents/fullPaperAgent.js` | **Agent 核心**：论文全文按步骤拆解 → 调多个分析维度 → 反思/纠错 → 汇总打分，长文自动分块 + 结果合并 |
+| `prompts.js` | **提示词模板库**：集中全部 system 提示词（路由级 + Agent 步骤级 + 反思循环），函数式变量注入，对标 LangChain PromptTemplate |
+| `agents/chain.js` | **Chain 流水线**：自研轻量链式编排（Pipeline），声明式步骤 + 上下文贯穿 + required 中止/非 required 降级 + 进度回调，对标 LangChain RunnableSequence |
+| `agents/fullPaperAgent.js` | **Agent 核心**：以 Chain 三步流水线（结构→综合诊断→综合报告）驱动全文分析，含反思循环（审稿人→改进）、跨文档用户画像、长文自动分块 + 结果合并 |
 | `utils/llm.js` | **LLM 网关**：统一 OpenAI 兼容调用、SSE 流式、JSON 模式、429/5xx 指数退避重试、调用审计入库、内存调试日志 |
 | `utils/crypto.js` | API Key AES 加解密 + 掩码显示（密钥存 `data/.enc_key`） |
 | `utils/logger.js` | Winston 日志：错误/全量分开落盘到 `data/logs/` |
@@ -190,8 +198,9 @@ index.js ──► app.js ──► routes/(控制器)
 3. 被问"AI Key 怎么存" → 讲 `utils/crypto.js` AES 加密 + `data/.enc_key` + `providerResolver.js` 运行时解密。
 4. 被问"多模型怎么支持" → 讲 `providers.js`（定义表）+ `utils/llm.js`（网关，统一 OpenAI 兼容协议）。
 5. 被问"怎么防超卖/防刷" → 讲 `middleware/quota.js` + `rateLimit.js` + `llm_calls` 审计表按真实 token 计费。
-6. 被问"质量保障" → 打开 GitHub Actions CI：lint + 24 测试 + 覆盖率门禁，现场跑 `npm test`。
-7. 被问"和 Java 项目有什么区别" → 见《技术栈对比》：**思想同构**（分层/IoC 拆分为模块化 require/中间件≈拦截器），差异在规模与生态，本地小工具用 Node 更轻量，**无需换栈**。
+6. 被问"质量保障" → 打开 GitHub Actions CI：lint + 30 测试 + 覆盖率门禁，现场跑 `npm test`。
+7. 被问"提示词/Chain 怎么组织" → 讲 `server/prompts.js`（模板集中 + 变量注入，对标 PromptTemplate）与 `server/agents/chain.js`（Pipeline 声明式步骤 + 失败降级，对标 RunnableSequence）。
+8. 被问"和 Java 项目有什么区别" → 见《技术栈对比》：**思想同构**（分层/IoC 拆分为模块化 require/中间件≈拦截器），差异在规模与生态，本地小工具用 Node 更轻量，**无需换栈**。
 
 ---
 

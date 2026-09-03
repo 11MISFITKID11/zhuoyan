@@ -19,6 +19,8 @@
 const logger = require('../utils/logger');
 const { resolveProviderInfo } = require('../utils/providerResolver');
 const { getUserProfile, saveUserProfile } = require('../db');
+const prompts = require('../prompts');
+const { Pipeline } = require('./chain');
 
 // ============================================================
 // Agent 步骤定义
@@ -28,26 +30,7 @@ const STEPS = {
     name: '结构分析',
     description: '识别论文段落结构与功能定位',
     temperature: 0.2,
-    systemPrompt: `你是一位学术论文结构分析专家。分析用户输入的学术论文，识别其段落结构与功能。
-
-请返回 JSON 格式（不要包含任何其他文字）：
-{
-  "paperType": "论文类型（如：研究论文、综述、实验报告、案例分析等）",
-  "totalParagraphs": 段落总数,
-  "sections": [
-    {
-      "index": 0,
-      "name": "段落功能名称（如：引言、方法、结果、讨论、结论等）",
-      "range": "第X-Y段",
-      "summary": "该部分内容摘要（30-60字）",
-      "function": "claim | evidence | method | result | discussion | conclusion | transition | background"
-    }
-  ],
-  "structureScore": 1-10,
-  "structureIssues": ["结构问题描述"]
-}
-
-注意：structureScore 为 1-10 的整数，10 表示结构完美。`,
+    systemPrompt: prompts.AGENT_STRUCTURE_SYSTEM,
     parse: (data) => {
       const match = data.match(/\{[\s\S]*\}/);
       if (!match) return null;
@@ -59,19 +42,7 @@ const STEPS = {
     name: '术语一致性',
     description: '发现术语不一致问题',
     temperature: 0.2,
-    systemPrompt: `你是一位学术术语专家。分析用户输入的学术论文，检查术语使用的一致性。
-
-请返回 JSON 格式的数组（不要包含任何其他文字），每项代表一个术语一致性问题：
-{
-  "concept": "核心概念（如：机器学习）",
-  "variants": ["文中出现的不同表述", "..."],
-  "recommended": "建议统一使用的术语",
-  "occurrences": 出现次数,
-  "severity": "高 | 中 | 低",
-  "locations": ["第X段", "..."]
-}
-
-如果没有术语一致性问题，返回空数组 []。`,
+    systemPrompt: prompts.AGENT_TERMS_SYSTEM,
     parse: (data) => {
       const match = data.match(/\[[\s\S]*\]/);
       if (!match) return [];
@@ -83,32 +54,7 @@ const STEPS = {
     name: '逻辑连贯性',
     description: '跨段落论证关系分析',
     temperature: 0.3,
-    systemPrompt: `你是一位学术论文逻辑分析专家。分析用户输入的学术论文的论证结构与逻辑连贯性。
-
-请返回 JSON 格式（不要包含任何其他文字）：
-{
-  "mainClaim": "论文的核心论点（20-50字）",
-  "argumentChain": [
-    {
-      "step": 1,
-      "type": "claim | evidence | reasoning | counter | conclusion",
-      "text": "论证步骤摘要（20-50字）",
-      "paraIdx": 0,
-      "supported": true | false
-    }
-  ],
-  "logicGaps": [
-    {
-      "description": "逻辑断层描述",
-      "location": "第X段→第Y段",
-      "severity": "高 | 中 | 低",
-      "suggestion": "改进建议"
-    }
-  ],
-  "logicScore": 1-10
-}
-
-注意：logicScore 为 1-10 的整数。如果没有逻辑断层，logicGaps 为空数组。`,
+    systemPrompt: prompts.AGENT_LOGIC_SYSTEM,
     parse: (data) => {
       const match = data.match(/\{[\s\S]*\}/);
       if (!match) return { argumentChain: [], logicGaps: [], logicScore: 0 };
@@ -120,30 +66,7 @@ const STEPS = {
     name: '风格评估',
     description: '统一性、正式度、流畅度',
     temperature: 0.3,
-    systemPrompt: `你是一位学术写作风格评估专家。分析用户输入的学术论文的写作风格。
-
-请返回 JSON 格式（不要包含任何其他文字）：
-{
-  "scores": {
-    "formality": 1-10,
-    "consistency": 1-10,
-    "fluency": 1-10,
-    "conciseness": 1-10,
-    "objectivity": 1-10
-  },
-  "issues": [
-    {
-      "category": "formality | consistency | fluency | conciseness | objectivity",
-      "description": "问题描述",
-      "example": "原文示例片段",
-      "suggestion": "改进建议"
-    }
-  ],
-  "overallStyleScore": 1-10,
-  "summary": "风格总体评价（50-100字）"
-}
-
-注意：所有分数为 1-10 的整数。`,
+    systemPrompt: prompts.AGENT_STYLE_SYSTEM,
     parse: (data) => {
       const match = data.match(/\{[\s\S]*\}/);
       if (!match) return { scores: {}, issues: [], overallStyleScore: 0, summary: '' };
@@ -155,33 +78,7 @@ const STEPS = {
     name: 'AIGC 风险评估',
     description: '全文 AI 生成概率评估',
     temperature: 0.2,
-    systemPrompt: `你是一位 AIGC 文本检测专家。评估以下学术论文的 AI 生成概率。
-
-请返回 JSON 格式（不要包含任何其他文字）：
-{
-  "overallRate": 0.0-1.0,
-  "riskLevel": "low | medium | high",
-  "indicators": [
-    {
-      "type": "template | redundancy | uniformity | lack_citation | passive_voice",
-      "description": "AI 生成特征描述",
-      "example": "原文示例"
-    }
-  ],
-  "paragraphs": [
-    {
-      "index": 0,
-      "rate": 0.0-1.0,
-      "reason": "该段落评分理由（20-50字）"
-    }
-  ]
-}
-
-评分标准：
-- 0.0-0.3: 极可能是人类写作
-- 0.3-0.5: 可能是人类写作
-- 0.5-0.7: 可能由 AI 辅助
-- 0.7-1.0: 极可能是 AI 生成`,
+    systemPrompt: prompts.AGENT_AIGC_SYSTEM,
     parse: (data) => {
       const match = data.match(/\{[\s\S]*\}/);
       if (!match) return { overallRate: 0, riskLevel: 'low', indicators: [], paragraphs: [] };
@@ -193,27 +90,7 @@ const STEPS = {
     name: '综合诊断',
     description: '一次完成术语/逻辑/风格/AIGC 四项诊断',
     temperature: 0.3,
-    systemPrompt: `你是一位学术写作诊断专家。对输入的学术论文进行四项诊断：术语一致性、逻辑连贯性、写作风格、AIGC 生成痕迹。
-
-请返回 JSON 格式（不要包含任何其他文字），整体结构：
-{
-  "terms": [ ... ],
-  "logic": { ... },
-  "style": { ... },
-  "aigc": { ... }
-}
-
-【terms】术语一致性 — 数组，每项：{ "concept": "核心概念", "variants": ["文中不同表述"], "recommended": "建议统一术语", "occurrences": 出现次数, "severity": "高|中|低", "locations": ["第X段"] }。无问题返回 []。
-
-【logic】逻辑连贯性 — 对象：{ "mainClaim": "核心论点（20-50字）", "argumentChain": [{ "step": 1, "type": "claim|evidence|reasoning|counter|conclusion", "text": "步骤摘要（20-50字）", "paraIdx": 0, "supported": true }], "logicGaps": [{ "description": "断层描述", "location": "第X段→第Y段", "severity": "高|中|低", "suggestion": "改进建议" }], "logicScore": 1-10 }。无断层时 logicGaps 为 []。
-
-【style】写作风格 — 对象：{ "scores": { "formality": 1-10, "consistency": 1-10, "fluency": 1-10, "conciseness": 1-10, "objectivity": 1-10 }, "issues": [{ "category": "formality|consistency|fluency|conciseness|objectivity", "description": "问题描述", "example": "原文示例", "suggestion": "改进建议" }], "overallStyleScore": 1-10, "summary": "风格总体评价（50-100字）" }。
-
-【aigc】AIGC 生成痕迹 — 对象：{ "overallRate": 0.0-1.0, "riskLevel": "low|medium|high", "indicators": [{ "type": "template|redundancy|uniformity|lack_citation|passive_voice", "description": "AI 特征描述", "example": "原文示例" }], "paragraphs": [{ "index": 0, "rate": 0.0-1.0, "reason": "评分理由（20-50字）" }] }。
-
-注意：
-- 所有分数为 1-10 整数，AIGC 概率为 0-1 小数
-- 某方面没有问题，对应数组返回 []`,
+    systemPrompt: prompts.AGENT_DIAGNOSE_SYSTEM,
     parse: (data) => {
       const match = data.match(/\{[\s\S]*\}/);
       if (!match) return { terms: [], logic: null, style: null, aigc: null };
@@ -371,53 +248,10 @@ class FullPaperAgent {
   }
 
   /**
-   * 构建综合报告的 prompt
+   * 构建综合报告的 prompt（委托给提示词模板库，注入各维度分析结果 JSON）
    */
-  buildReportPrompt(analysis) {
-    return `你是一位学术写作综合评估专家。根据以下各维度分析结果，生成一份结构化的综合报告。
-
-请返回 JSON 格式（不要包含任何其他文字）：
-{
-  "overallScore": 1-100,
-  "summary": "总体评价（100-200字）",
-  "strengths": ["论文优点1", "优点2", "..."],
-  "weaknesses": ["论文不足1", "不足2", "..."],
-  "recommendations": [
-    {
-      "priority": "高 | 中 | 低",
-      "category": "structure | terms | logic | style | aigc",
-      "title": "建议标题",
-      "description": "具体建议描述",
-      "impact": "改进后预期效果"
-    }
-  ],
-  "actionPlan": [
-    {
-      "step": 1,
-      "action": "行动步骤描述",
-      "tool": "建议使用的琢言工具（polish | logic | aigc | rewrite）"
-    }
-  ]
-}
-
-以下是各维度分析结果：
-
-【结构分析】
-${JSON.stringify(analysis.structure, null, 2)}
-
-【术语一致性】
-${JSON.stringify(analysis.terms, null, 2)}
-
-【逻辑连贯性】
-${JSON.stringify(analysis.logic, null, 2)}
-
-【风格评估】
-${JSON.stringify(analysis.style, null, 2)}
-
-【AIGC 风险评估】
-${JSON.stringify(analysis.aigc, null, 2)}
-
-请基于以上结果综合判断，给出整体评分（1-100）、优缺点、优先改进建议和行动计划。`;
+  buildReportPrompt(analysisJson) {
+    return prompts.AGENT_REPORT_SYSTEM(analysisJson);
   }
 
   /**
@@ -451,50 +285,74 @@ ${JSON.stringify(analysis.aigc, null, 2)}
   }
 
   /**
-   * 单次全文分析（原文逻辑，未分块）
+   * 单次全文分析（未分块）
+   *
+   * 以 Chain（Pipeline）驱动三步流水线，步骤定义即流程文档：
+   *   1. structure（required）→ 产出段落结构，写入共享上下文 ctx
+   *   2. diagnose            → 消费结构信息，产出术语/逻辑/风格/AIGC 四维诊断
+   *   3. report              → 消费全部前序结果，产出综合报告
+   * 链后处理：反思循环（Critic→Revise）、总分计算、用户画像持久化
    */
   async _analyzeSingle(paperText, options = {}) {
     const { userId, onProgress } = options;
 
     const analysis = {};
-    const steps = [];
+    const ctx = { paperText, analysis };
 
-    // ---------- 步骤 1：结构分析（必须先执行）----------
-    const progress = (step, total) => {
-      if (onProgress) onProgress({ step, total, name: STEPS[step]?.name || step });
-    };
-
-    progress('structure', 3);
-    const structResult = await this._safeStep('structure', paperText);
-    if (!structResult.success) {
-      // 结构分析是后续步骤的基础，失败则整体终止并返回真实原因
-      const reason = structResult.error || '未知错误';
-      logger.warn('Agent 结构分析失败，终止流程', { reason });
-      throw new Error('分析失败（结构分析）：' + reason);
-    }
-    analysis.structure = structResult.data || {};
-    steps.push(structResult);
-
-    const structContext = JSON.stringify({
-      paperType: analysis.structure.paperType,
-      sections: analysis.structure.sections
+    const pipeline = new Pipeline({
+      logger: this.logger,
+      onProgress: (step, name, idx, total) => {
+        if (onProgress) onProgress({ step, total, name });
+      }
     });
 
-    // ---------- 步骤 2：综合诊断（术语/逻辑/风格/AIGC 一次完成）----------
-    progress('diagnose', 3);
-    const diagResult = await this._safeStep('diagnose', paperText, structContext);
-    const diag = diagResult.data || {};
-    analysis.terms = diag.terms || [];
-    analysis.logic = diag.logic || null;
-    analysis.style = diag.style || null;
-    analysis.aigc = diag.aigc || null;
-    steps.push(diagResult);
+    // 步骤 1：结构分析（后续步骤依赖其结果，失败则整体终止）
+    pipeline.add({
+      key: 'structure', name: '结构分析', required: true,
+      run: async (c) => {
+        const r = await this._safeStep('structure', c.paperText);
+        if (!r.success) {
+          throw new Error('分析失败（结构分析）：' + (r.error || '未知错误'));
+        }
+        c.analysis.structure = r.data || {};
+        c.structContext = JSON.stringify({
+          paperType: c.analysis.structure.paperType,
+          sections: c.analysis.structure.sections
+        });
+        return r;
+      }
+    });
 
-    // ---------- 步骤 3：综合报告 ----------
-    progress('report', 3);
-    const reportResult = await this._safeStep('report', paperText, JSON.stringify(analysis, null, 2));
-    analysis.report = this._parseReport(reportResult);
-    steps.push(reportResult);
+    // 步骤 2：综合诊断（术语/逻辑/风格/AIGC 一次完成，失败降级为空结果不中断）
+    pipeline.add({
+      key: 'diagnose', name: '综合诊断',
+      run: async (c) => {
+        const r = await this._safeStep('diagnose', c.paperText, c.structContext);
+        const d = r.data || {};
+        c.analysis.terms = d.terms || [];
+        c.analysis.logic = d.logic || null;
+        c.analysis.style = d.style || null;
+        c.analysis.aigc = d.aigc || null;
+        return r;
+      }
+    });
+
+    // 步骤 3：综合报告（消费前序全部结果）
+    pipeline.add({
+      key: 'report', name: '综合报告生成',
+      run: async (c) => {
+        const r = await this._safeStep('report', c.paperText, JSON.stringify(c.analysis, null, 2));
+        c.analysis.report = this._parseReport(r);
+        return r;
+      }
+    });
+
+    const results = await pipeline.run(ctx);
+    const steps = [
+      results.structure.value,
+      results.diagnose.value,
+      results.report.value
+    ];
 
     // 反思循环：审稿人自评 → 改进（失败则保留原报告）
     const revisedReport = await this._reflectAndRevise(analysis);
@@ -617,7 +475,7 @@ ${JSON.stringify(analysis.aigc, null, 2)}
     try {
       const critique = await this.llmRequest(
         info.provider, info.apiKey, info.model,
-        '你是一位严格的学术审稿人。请找出分析报告中的问题：分析是否准确、结论是否有依据、建议是否具体可操作、是否遗漏重要问题。直接给出批评意见。',
+        prompts.REFLECT_CRITIQUE_SYSTEM,
         `请审阅下面这份学术论文分析报告，指出其中的不足、错误与遗漏：\n\n${reportText}`,
         0.3, info.customEndpoint, info.userId,
         this._signal ? { signal: this._signal } : {}
@@ -626,7 +484,7 @@ ${JSON.stringify(analysis.aigc, null, 2)}
 
       const revised = await this.llmRequest(
         info.provider, info.apiKey, info.model,
-        '你是一位学术写作综合评估专家。请根据审稿意见改进分析报告，输出 JSON。',
+        prompts.REFLECT_REVISE_SYSTEM,
         `下面是一份分析报告和审稿人的批评意见，请据意见改进报告，保持与原报告相同的 JSON 结构：\n\n【原报告】\n${reportText}\n\n【审稿人意见】\n${critique.content}`,
         0.4, info.customEndpoint, info.userId,
         this._signal ? { signal: this._signal } : {}

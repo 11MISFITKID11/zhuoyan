@@ -62,11 +62,31 @@ async function streamCall(path, body, { onDelta, signal } = {}) {
 // ============================================================
 // AI 引擎：真实 API（SSE 流式）/ 模拟回退
 // opts: { signal, onDelta } —— signal 用于取消，onDelta 用于实时增量
+//
+// 提速规则：
+// 1) 已尝试真实 API 但失败时，回退模拟数据不再附加 1~2s 人工延迟（白等只会更慢）；
+// 2) 模型返回空数组（如“未发现问题”）视为有效结果直接返回，避免误判后二次回退；
+// 3) 仅“纯演示（未登录/未配置）”路径保留短延迟，模拟思考过程。
 // ============================================================
+
+// 演示模式模拟“思考”的延迟区间（毫秒）
+const MOCK_DELAY_RANGE = {
+  polish: [350, 600],
+  logic: [400, 750],
+  aigc: [350, 600],
+  rewrite: [300, 550],
+  optimize: [500, 900]
+};
+function mockDelay(key) {
+  const [min, max] = MOCK_DELAY_RANGE[key] || [400, 700];
+  return delay(min + Math.random() * (max - min));
+}
+
 const AIEngine = {
   async polish(text, opts = {}) {
-    const token = getToken();
-    if (token) {
+    let triedApi = false;
+    if (getToken()) {
+      triedApi = true;
       try {
         const data = await streamCall('/api/polish', {
           text,
@@ -74,20 +94,21 @@ const AIEngine = {
           rawApiKey: apiSettings.apiKey || '',
           model: apiSettings.model || ''
         }, opts);
-        if (data.suggestions && data.suggestions.length > 0) return data.suggestions;
         if (data.parseError) throw new Error('返回格式异常');
+        if (Array.isArray(data.suggestions)) return data.suggestions; // 含空数组：模型判定无问题
       } catch (err) {
         if (err.name === 'AbortError') throw err;
         if (err.quota) { showProUpgrade(); throw err; }
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }
-    await delay(1200 + Math.random() * 600);
+    if (!triedApi) await mockDelay('polish');
     return generatePolishResults(text);
   },
   async analyzeLogic(text, opts = {}) {
-    const token = getToken();
-    if (token) {
+    let triedApi = false;
+    if (getToken()) {
+      triedApi = true;
       try {
         const data = await streamCall('/api/logic', {
           text,
@@ -95,20 +116,21 @@ const AIEngine = {
           rawApiKey: apiSettings.apiKey || '',
           model: apiSettings.model || ''
         }, opts);
-        if (data.nodes && data.nodes.length > 0) return data.nodes;
         if (data.parseError) throw new Error('返回格式异常');
+        if (Array.isArray(data.nodes)) return data.nodes;
       } catch (err) {
         if (err.name === 'AbortError') throw err;
         if (err.quota) { showProUpgrade(); throw err; }
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }
-    await delay(1200 + Math.random() * 800);
+    if (!triedApi) await mockDelay('logic');
     return generateLogicResults(text);
   },
   async detectAIGC(text, opts = {}) {
-    const token = getToken();
-    if (token) {
+    let triedApi = false;
+    if (getToken()) {
+      triedApi = true;
       try {
         const data = await streamCall('/api/aigc/detect', {
           text,
@@ -116,20 +138,21 @@ const AIEngine = {
           rawApiKey: apiSettings.apiKey || '',
           model: apiSettings.model || ''
         }, opts);
-        if (data.paragraphs && data.paragraphs.length > 0) return data.paragraphs;
         if (data.parseError) throw new Error('返回格式异常');
+        if (Array.isArray(data.paragraphs)) return data.paragraphs;
       } catch (err) {
         if (err.name === 'AbortError') throw err;
         if (err.quota) { showProUpgrade(); throw err; }
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }
-    await delay(1200 + Math.random() * 600);
+    if (!triedApi) await mockDelay('aigc');
     return generateAIGCResults(text);
   },
   async rewriteAIGC(text, opts = {}) {
-    const token = getToken();
-    if (token) {
+    let triedApi = false;
+    if (getToken()) {
+      triedApi = true;
       try {
         const data = await streamCall('/api/aigc/rewrite', {
           text,
@@ -144,12 +167,13 @@ const AIEngine = {
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }
-    await delay(1000 + Math.random() * 500);
+    if (!triedApi) await mockDelay('rewrite');
     return generateRewrite(text);
   },
   async optimizeLogic(text, opts = {}) {
-    const token = getToken();
-    if (token) {
+    let triedApi = false;
+    if (getToken()) {
+      triedApi = true;
       try {
         const data = await streamCall('/api/logic/optimize', {
           text,
@@ -164,7 +188,7 @@ const AIEngine = {
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }
-    await delay(1500 + Math.random() * 1000);
+    if (!triedApi) await mockDelay('optimize');
     return generateLogicOptimization(text);
   }
 };

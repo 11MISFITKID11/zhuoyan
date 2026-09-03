@@ -40,7 +40,14 @@ app.use(cors({
 // ============================================================
 // 压缩
 // ============================================================
-app.use(compression());
+app.use(compression({
+  // SSE 实时流不做 gzip：压缩会先把增量缓冲进 zlib，导致打字机效果失效、
+  // 首字节延迟变大（看似“卡住不动”）。JSON/静态资源仍正常压缩。
+  filter: (req, res) => {
+    if (res.getHeader('Content-Type') === 'text/event-stream') return false;
+    return compression.filter(req, res);
+  }
+}));
 
 // ============================================================
 // Cookie 解析

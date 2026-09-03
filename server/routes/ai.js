@@ -13,6 +13,7 @@ const { consumeQuota } = require('../middleware/quota');
 const { apiLimiter } = require('../middleware/rateLimit');
 const { llmRequest } = require('../utils/llm');
 const { resolveProviderInfo } = require('../utils/providerResolver');
+const prompts = require('../prompts');
 const logger = require('../utils/logger');
 
 const router = express.Router();
@@ -29,6 +30,27 @@ function parseJsonArray(raw) {
     const parsed = JSON.parse(match[0]);
     return Array.isArray(parsed) ? parsed : null;
   } catch (e) { return null; }
+}
+
+// 按原文段落拼装 AIGC 结果：模型只需返回 { index, aiRate }，不回显段落原文。
+// 输出 token 从「≈输入 2~3 倍」降为「每段几 token」，长文检测显著提速；段落文本始终取原文，不丢内容。
+function composeParagraphResults(paragraphs, list) {
+  const rateByIndex = new Map();
+  if (Array.isArray(list)) {
+    for (const item of list) {
+      if (item && Number.isFinite(item.aiRate)) {
+        const idx = Number(item.index);
+        if (Number.isInteger(idx) && idx >= 1 && idx <= paragraphs.length) {
+          rateByIndex.set(idx, item.aiRate);
+        }
+      }
+    }
+  }
+  return paragraphs.map((text, i) => {
+    let rate = rateByIndex.get(i + 1);
+    if (typeof rate !== 'number' || !(rate >= 0 && rate <= 1)) rate = 0.5; // 模型漏评段落给保守中位
+    return { text, aiRate: Math.round(rate * 100) / 100 };
+  });
 }
 
 // 客户端断开（刷新/取消）时 abort LLM 调用，避免服务端白跑
@@ -51,9 +73,8 @@ function startSSE(res) {
 // 带 JSON 解析重试的 LLM 调用（response_format + 失败带错重试一次）
 async function llmJsonCall({ provider, apiKey, model, systemPrompt, text, temperature, customEndpoint, userId, signal }) {
   const attempt = async (extra) => {
-    const prompt = extra
-      ? `${systemPrompt}\n\n【注意】你上一次的输出不是合法 JSON（参考输出开头：${extra.slice(0, 200)}）。请务必只输出一个合法的 JSON 数组，不要包含任何其他文字或解释。`
-      : systemPrompt;
+    // extra 为 retryInstruction 生成的纠偏指令（完整追加片段），非空时拼在 systemPrompt 之后
+    const prompt = extra ? systemPrompt + extra : systemPrompt;
     return llmRequest(provider, apiKey, model, prompt, text, temperature, customEndpoint, userId, {
       responseFormat: { type: 'json_object' },
       signal
@@ -64,7 +85,7 @@ async function llmJsonCall({ provider, apiKey, model, systemPrompt, text, temper
   let parsed = parseJsonArray(result.content);
   if (parsed === null) {
     logger.warn('JSON 解析失败，自动带错重试一次', { provider, model });
-    result = await attempt(result.content.slice(0, 200));
+    result = await attempt(prompts.retryInstruction(result.content.slice(0, 200)));
     parsed = parseJsonArray(result.content);
   }
   return { parsed, result };
@@ -156,28 +177,7 @@ router.post('/logic', authMiddleware, quotaMiddleware, apiLimiter, async (req, r
     const provider = info.provider;
     const model = modelName || info.model;
 
-    const systemPrompt = `你是一位学术写作逻辑分析专家。分析用户输入的学术文本的论证结构。
-
-请返回 JSON 格式的数组（不要包含任何其他文字），每项代表一个论证节点：
-{
-  "id": "n_序号",
-  "type": "claim | evidence | conclusion | transition",
-  "typeName": "论点 | 论据 | 结论 | 过渡",
-  "text": "节点内容的简要概括（20-60字）",
-  "level": 1-3,
-  "warning": null 或 "对逻辑问题的具体描述",
-  "paraIdx": 0
-}
-
-规则：
-- 论点(claim): 作者提出的核心主张 level=1
-- 论据(evidence): 支持论点的证据/数据/推理 level=2
-- 结论(conclusion): 从论据推导出的结论 level=2
-- 过渡(transition): 上下文衔接段落 level=1或2
-- warning: 仅在发现逻辑断层、衔接生硬、论据不足时填写
-- paraIdx: 对应原文的段落序号（从0开始）
-
-如果文本不适合做逻辑分析，返回包含一条说明的数组。`;
+    const systemPrompt = prompts.LOGIC_SYSTEM;
 
     const signal = makeAbortSignal(req, res);
     const acceptSSE = req.headers.accept === 'text/event-stream';
@@ -190,8 +190,8 @@ router.post('/logic', authMiddleware, quotaMiddleware, apiLimiter, async (req, r
           onDelta: (d) => res.write(`data: ${JSON.stringify({ type: 'delta', content: d })}\n\n`)
         });
         consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
-        const nodes = parseJsonArray(result.content) || [];
-        res.write(`data: ${JSON.stringify({ type: 'complete', nodes, usage: result.usage || {} })}\n\n`);
+        const parsed = parseJsonArray(result.content);
+        res.write(`data: ${JSON.stringify({ type: 'complete', nodes: parsed || [], parseError: parsed === null, usage: result.usage || {} })}\n\n`);
         res.end();
       } catch (err) {
         res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
@@ -285,21 +285,7 @@ router.post('/aigc/detect', authMiddleware, quotaMiddleware, apiLimiter, async (
     const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 10);
     const paraText = paragraphs.map((p, i) => `【段落 ${i + 1}】\n${p.trim()}`).join('\n\n---\n\n');
 
-    const systemPrompt = `你是一位 AIGC 文本检测专家。逐段评估以下文本的 AI 生成概率。
-
-请返回 JSON 格式的数组（不要包含任何其他文字），数组长度必须等于段落数：
-{
-  "text": "段落原文（完整原文，不要截断）",
-  "aiRate": 0.0-1.0
-}
-
-评分标准：
-- 0.0-0.3: 极可能是人类写作（语言灵活、有个人风格、存在合理的不完美）
-- 0.3-0.5: 可能是人类写作（某些部分有模板痕迹）
-- 0.5-0.7: 可能由 AI 辅助生成（结构规整、语言模板化）
-- 0.7-1.0: 极可能是 AI 生成（高度模板化、缺乏个人风格）
-
-注意：aiRate 必须是一个 0-1 之间的小数，保留两位小数。`;
+    const systemPrompt = prompts.AIGC_DETECT_SYSTEM;
 
     const signal = makeAbortSignal(req, res);
     const acceptSSE = req.headers.accept === 'text/event-stream';
@@ -312,8 +298,8 @@ router.post('/aigc/detect', authMiddleware, quotaMiddleware, apiLimiter, async (
           onDelta: (d) => res.write(`data: ${JSON.stringify({ type: 'delta', content: d })}\n\n`)
         });
         consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
-        const paragraphs_result = parseJsonArray(result.content) || [];
-        res.write(`data: ${JSON.stringify({ type: 'complete', paragraphs: paragraphs_result, usage: result.usage || {} })}\n\n`);
+        const parsed = parseJsonArray(result.content);
+        res.write(`data: ${JSON.stringify({ type: 'complete', paragraphs: composeParagraphResults(paragraphs, parsed), parseError: parsed === null, usage: result.usage || {} })}\n\n`);
         res.end();
       } catch (err) {
         res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
@@ -330,7 +316,7 @@ router.post('/aigc/detect', authMiddleware, quotaMiddleware, apiLimiter, async (
     if (parsed === null) {
       return res.json({ paragraphs: [], raw: result.content, parseError: true });
     }
-    res.json({ paragraphs: parsed, elapsed: result.elapsed, usage: result.usage });
+    res.json({ paragraphs: composeParagraphResults(paragraphs, parsed), elapsed: result.elapsed, usage: result.usage });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
