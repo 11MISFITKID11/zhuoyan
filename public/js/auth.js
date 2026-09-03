@@ -28,6 +28,9 @@ async function checkAuth() {
       await loadUserApiKey();
       updateAPIStatus();
       await fetchDocsFromServer();
+      // 账号切换（登录/注册）后立即刷新配额：quotaCache 可能残留上一账号的 plan/用量，
+      // 必须重新拉取，避免新账号（free）沿用旧账号（pro）的「无限」显示
+      refreshQuota();
     }
   } catch (e) {
     storeToken(null);
@@ -173,6 +176,9 @@ function doLogout() {
   documents.length = 0;
   apiSettings.hasServerKey = false;  // 清除用户 API 状态
   apiSettings.apiKey = '';
+  // 重置上一账号残留的配额缓存（plan/用量），回到未登录演示口径（0 / 3,000）
+  quotaCache = { used: 0, limit: 3000, plan: 'free' };
+  renderQuota();
   renderDocList(); renderWsRecent(); updateStats();
   checkAuth();
   showToast('已退出登录', '');

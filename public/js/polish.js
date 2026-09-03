@@ -192,10 +192,10 @@ function scrollToHighlight(id) {
   }
 }
 
-// 后端额度缓存（由 refreshQuota / adoptQuota 从 /api/usage 刷新，页面加载与采纳成功后同步）
-// 额度口径：仅在「采纳 AI 修改」时按采纳内容的字数累计（adoptQuota）；
-// 分析/生成过程不计费 —— 不做修改则额度不变，接受修改才增加字数；
-// 已达上限时由入口预检与后端 429 兜底，只能升级 Pro 解锁。
+// 额度缓存（数据源：/api/usage；由 refreshQuota 拉取、adoptQuota 乐观更新后 renderQuota 本地渲染）
+// 口径：Pro 会员不计数、无限制（左下角显示「无限」）；仅免费用户计数并受每日限额约束；
+// 只在「采纳 AI 修改」时按采纳内容字数累计（adoptQuota）：分析/生成不计费，不做修改额度不变，
+// 接受几个字左下角即时 + 几个字；已达上限由入口预检（assertQuotaAvailable）与后端 429 兜底，只能升级 Pro。
 let quotaCache = { used: 0, limit: 3000, plan: 'free' };
 
 // 升级引导：额度不足时统一由此抛出 quota 错误，由各页面 catch 复位 UI 并弹出升级框
