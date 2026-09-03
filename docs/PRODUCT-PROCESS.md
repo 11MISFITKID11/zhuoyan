@@ -16,7 +16,7 @@
 | ③ 编码实现 | 后端 6 组路由 + AI 网关 + 全文 Agent；前端 12 个 ES 模块；better-sqlite3 WAL 库 | `server/`（路由/中间件/agents/utils）、`public/js/`、`server/db.js` | "分层 + 网关 + 编排，代码可逐文件讲解" |
 | ④ 测试保障 | 30 条 Jest 单测（核心逻辑 + Chain 流水线 6 条新增）+ ESLint 0 error | `tests/`、`eslint.config.js` | "CI 门禁：lint + 测试 + 覆盖率阈值" |
 | ⑤ CI/CD | GitHub Actions 每次 push 自动跑质量门禁；Docker 多阶段镜像暴露 3003 | `.github/workflows/ci.yml`、`Dockerfile`、仓库 Actions 页面徽章 | "提交即验证，main 永远是绿的" |
-| ⑥ 文档与演示 | 结构详解 / 演示口述稿 / 本过程地图 + README 完整目录树 + 历史 commit | `docs/*.md`、GitHub commit 历史 | "从 README 到代码到演示，一条线讲通" |
+| ⑥ 文档与演示 | 结构详解 / 演示口述稿 / 产品过程地图 / **实现说明报告（核心代码+流程图+伪代码）** + README 完整目录树 + 历史 commit | `docs/*.md`（含 `IMPLEMENTATION-REPORT.md`）、GitHub commit 历史 | "从 README 到代码到演示，一条线讲通" |
 
 ## 3. 质量证据（被问"凭什么说它工程化"）
 
