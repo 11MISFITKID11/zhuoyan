@@ -3,13 +3,13 @@
  *
  * v2：所有接口支持 SSE 流式输出（Accept: text/event-stream）、
  *     客户端取消（AbortController 链路）、JSON response_format + 解析失败重试、
- *     按真实 token 扣配额（llm_calls 审计）
+ *     免费额度按「输入字数」扣减（与左下角显示口径一致，见 middleware/quota.js），
+ *     真实 token 消耗另记入 llm_calls 审计表
  */
 
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const quotaMiddleware = require('../middleware/quota');
-const { consumeQuota } = require('../middleware/quota');
 const { apiLimiter } = require('../middleware/rateLimit');
 const { llmRequest } = require('../utils/llm');
 const { textRequest } = require('../utils/langchainClient');
@@ -117,7 +117,6 @@ router.post('/polish', authMiddleware, quotaMiddleware, apiLimiter, async (req, 
           stream: true, signal,
           onDelta: (d) => res.write(`data: ${JSON.stringify({ type: 'delta', content: d })}\n\n`)
         });
-        consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
         const suggestions = parseJsonArray(result.content) || [];
         res.write(`data: ${JSON.stringify({ type: 'complete', suggestions, usage: result.usage || {} })}\n\n`);
         res.end();
@@ -132,7 +131,6 @@ router.post('/polish', authMiddleware, quotaMiddleware, apiLimiter, async (req, 
       provider, apiKey: info.apiKey, model, systemPrompt, text,
       temperature: 0.2, customEndpoint, userId: req.user.id, signal
     });
-    consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
     if (parsed === null) {
       return res.json({ suggestions: [], raw: result.content, parseError: true });
     }
@@ -168,7 +166,6 @@ router.post('/logic', authMiddleware, quotaMiddleware, apiLimiter, async (req, r
           stream: true, signal,
           onDelta: (d) => res.write(`data: ${JSON.stringify({ type: 'delta', content: d })}\n\n`)
         });
-        consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
         const parsed = parseJsonArray(result.content);
         res.write(`data: ${JSON.stringify({ type: 'complete', nodes: parsed || [], parseError: parsed === null, usage: result.usage || {} })}\n\n`);
         res.end();
@@ -183,7 +180,6 @@ router.post('/logic', authMiddleware, quotaMiddleware, apiLimiter, async (req, r
       provider, apiKey: info.apiKey, model, systemPrompt, text,
       temperature: 0.3, customEndpoint, userId: req.user.id, signal
     });
-    consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
     if (parsed === null) {
       return res.json({ nodes: [], raw: result.content, parseError: true });
     }
@@ -219,7 +215,6 @@ router.post('/logic/optimize', authMiddleware, quotaMiddleware, apiLimiter, asyn
           stream: true, signal,
           onDelta: (d) => res.write(`data: ${JSON.stringify({ type: 'delta', content: d })}\n\n`)
         });
-        consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
         res.write(`data: ${JSON.stringify({ type: 'complete', optimized: result.content.trim(), usage: result.usage || {} })}\n\n`);
         res.end();
       } catch (err) {
@@ -230,7 +225,6 @@ router.post('/logic/optimize', authMiddleware, quotaMiddleware, apiLimiter, asyn
     }
 
     const result = await llmRequest(provider, info.apiKey, model, systemPrompt, text, 0.4, customEndpoint, req.user.id, { signal });
-    consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
     res.json({ optimized: result.content.trim(), elapsed: result.elapsed, usage: result.usage });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -265,7 +259,6 @@ router.post('/aigc/detect', authMiddleware, quotaMiddleware, apiLimiter, async (
           stream: true, signal,
           onDelta: (d) => res.write(`data: ${JSON.stringify({ type: 'delta', content: d })}\n\n`)
         });
-        consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
         const parsed = parseJsonArray(result.content);
         res.write(`data: ${JSON.stringify({ type: 'complete', paragraphs: composeParagraphResults(paragraphs, parsed), parseError: parsed === null, usage: result.usage || {} })}\n\n`);
         res.end();
@@ -280,7 +273,6 @@ router.post('/aigc/detect', authMiddleware, quotaMiddleware, apiLimiter, async (
       provider, apiKey: info.apiKey, model, systemPrompt, text: paraText,
       temperature: 0.2, customEndpoint, userId: req.user.id, signal
     });
-    consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
     if (parsed === null) {
       return res.json({ paragraphs: [], raw: result.content, parseError: true });
     }
@@ -319,7 +311,6 @@ router.post('/aigc/rewrite', authMiddleware, quotaMiddleware, apiLimiter, async 
           stream: true, signal,
           onDelta: (d) => res.write(`data: ${JSON.stringify({ type: 'delta', content: d })}\n\n`)
         });
-        consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
         res.write(`data: ${JSON.stringify({ type: 'complete', rewritten: result.content.trim(), usage: result.usage || {} })}\n\n`);
         res.end();
       } catch (err) {
@@ -330,7 +321,6 @@ router.post('/aigc/rewrite', authMiddleware, quotaMiddleware, apiLimiter, async 
     }
 
     const result = await llmCall({ signal });
-    consumeQuota(req.user.id, result.usage?.total_tokens || text.length);
     res.json({ rewritten: result.content.trim(), elapsed: result.elapsed, usage: result.usage });
   } catch (err) {
     res.status(500).json({ error: err.message });

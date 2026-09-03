@@ -34,6 +34,12 @@ async function startAgentAnalysis() {
   const text = input.value.trim();
   if (!text) { showToast('请输入论文文本', 'error'); return; }
   if (text.length < 50) { showToast('文本过短，请输入至少 50 字', 'error'); return; }
+  // 免费额度预检：仅「已达上限」才拦截（分析过程本身不扣费，额度只随「采纳修改」累计；后端仍兜底 429）
+  if (getToken() && quotaCache.plan !== 'pro' && (quotaCache.used || 0) >= (quotaCache.limit || 3000)) {
+    showToast('今日免费额度已用完（每日 ' + (quotaCache.limit || 3000).toLocaleString() + ' 字），请升级 Pro', 'error');
+    showProUpgrade();
+    return;
+  }
 
   const btn = document.getElementById('btnStartAgent');
   const statusEl = document.getElementById('agentStatus');
@@ -69,9 +75,15 @@ async function startAgentAnalysis() {
     });
 
     if (!res.ok) {
-      let errMsg = '分析失败';
-      try { const e = await res.json(); errMsg = e.error || e.message || errMsg; } catch (e) {}
-      throw new Error(errMsg);
+      let errBody = null;
+      try { errBody = await res.json(); } catch (e) {}
+      // 配额超限：标记 quota 错误，走升级 Pro 引导
+      if (res.status === 429 || (errBody && errBody.error === 'QUOTA_EXCEEDED')) {
+        const err = new Error((errBody && errBody.message) || '今日免费额度已用完，请升级 Pro');
+        err.quota = true;
+        throw err;
+      }
+      throw new Error((errBody && (errBody.error || errBody.message)) || '分析失败 (' + res.status + ')');
     }
 
     // 读取 SSE 流：实时更新步骤进度，直到收到 complete
@@ -103,11 +115,19 @@ async function startAgentAnalysis() {
     statusEl.textContent = '● 分析完成 ✓';
     statusEl.style.color = 'var(--success)';
     showToast(`分析完成！综合评分: ${result.overallScore}/10`, 'success');
+    refreshQuota(); // 同步左下角额度显示
     renderAgentPanel(agentState.currentPanel || 'overview');
   } catch (err) {
     agentState.analyzing = false;
     btn.disabled = false;
     btn.textContent = '🤖 开始分析';
+    if (err && err.quota) {
+      statusEl.textContent = '● 额度已用完';
+      statusEl.style.color = 'var(--danger)';
+      showToast(err.message || '免费额度不足', 'error');
+      showProUpgrade();
+      return;
+    }
     statusEl.textContent = '● 分析失败';
     statusEl.style.color = 'var(--danger)';
     showToast(err.message || '分析失败', 'error');

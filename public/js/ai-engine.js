@@ -82,12 +82,20 @@ function mockDelay(key) {
   return delay(min + Math.random() * (max - min));
 }
 
+// 免费额度预检：仅「已达上限」时拦截（分析/生成过程本身不扣费，扣费只发生在采纳修改时）。
+// 实际扣减与超限兜底由后端 /api/usage/adopt 与 quotaMiddleware 完成。
+function assertQuotaAvailable() {
+  if (!getToken()) return; // 未登录走模拟数据，不消耗真实额度
+  if (quotaCache.plan !== 'pro' && (quotaCache.used || 0) >= (quotaCache.limit || 3000)) throw makeQuotaError();
+}
+
 const AIEngine = {
   async polish(text, opts = {}) {
     let triedApi = false;
     if (getToken()) {
       triedApi = true;
       try {
+        assertQuotaAvailable(); // 超限直接拦截，不发请求
         const data = await streamCall('/api/polish', {
           text,
           customEndpoint: apiSettings.customEndpoint,
@@ -95,10 +103,10 @@ const AIEngine = {
           model: apiSettings.model || ''
         }, opts);
         if (data.parseError) throw new Error('返回格式异常');
-        if (Array.isArray(data.suggestions)) return data.suggestions; // 含空数组：模型判定无问题
+        if (Array.isArray(data.suggestions)) { refreshQuota(); return data.suggestions; } // 含空数组：模型判定无问题
       } catch (err) {
         if (err.name === 'AbortError') throw err;
-        if (err.quota) { showProUpgrade(); throw err; }
+        if (err.quota) { throw err; }
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }
@@ -110,6 +118,7 @@ const AIEngine = {
     if (getToken()) {
       triedApi = true;
       try {
+        assertQuotaAvailable();
         const data = await streamCall('/api/logic', {
           text,
           customEndpoint: apiSettings.customEndpoint,
@@ -117,10 +126,10 @@ const AIEngine = {
           model: apiSettings.model || ''
         }, opts);
         if (data.parseError) throw new Error('返回格式异常');
-        if (Array.isArray(data.nodes)) return data.nodes;
+        if (Array.isArray(data.nodes)) { refreshQuota(); return data.nodes; }
       } catch (err) {
         if (err.name === 'AbortError') throw err;
-        if (err.quota) { showProUpgrade(); throw err; }
+        if (err.quota) { throw err; }
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }
@@ -132,6 +141,7 @@ const AIEngine = {
     if (getToken()) {
       triedApi = true;
       try {
+        assertQuotaAvailable();
         const data = await streamCall('/api/aigc/detect', {
           text,
           customEndpoint: apiSettings.customEndpoint,
@@ -139,10 +149,10 @@ const AIEngine = {
           model: apiSettings.model || ''
         }, opts);
         if (data.parseError) throw new Error('返回格式异常');
-        if (Array.isArray(data.paragraphs)) return data.paragraphs;
+        if (Array.isArray(data.paragraphs)) { refreshQuota(); return data.paragraphs; }
       } catch (err) {
         if (err.name === 'AbortError') throw err;
-        if (err.quota) { showProUpgrade(); throw err; }
+        if (err.quota) { throw err; }
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }
@@ -154,16 +164,17 @@ const AIEngine = {
     if (getToken()) {
       triedApi = true;
       try {
+        assertQuotaAvailable();
         const data = await streamCall('/api/aigc/rewrite', {
           text,
           customEndpoint: apiSettings.customEndpoint,
           rawApiKey: apiSettings.apiKey || '',
           model: apiSettings.model || ''
         }, opts);
-        if (data.rewritten) return data.rewritten;
+        if (data.rewritten) { refreshQuota(); return data.rewritten; }
       } catch (err) {
         if (err.name === 'AbortError') throw err;
-        if (err.quota) { showProUpgrade(); throw err; }
+        if (err.quota) { throw err; }
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }
@@ -175,16 +186,17 @@ const AIEngine = {
     if (getToken()) {
       triedApi = true;
       try {
+        assertQuotaAvailable();
         const data = await streamCall('/api/logic/optimize', {
           text,
           customEndpoint: apiSettings.customEndpoint,
           rawApiKey: apiSettings.apiKey || '',
           model: apiSettings.model || ''
         }, opts);
-        if (data.optimized) return data.optimized;
+        if (data.optimized) { refreshQuota(); return data.optimized; }
       } catch (err) {
         if (err.name === 'AbortError') throw err;
-        if (err.quota) { showProUpgrade(); throw err; }
+        if (err.quota) { throw err; }
         showToast('API 调用失败: ' + (err.message || '未知错误') + '，已回退到模拟数据', 'error');
       }
     }

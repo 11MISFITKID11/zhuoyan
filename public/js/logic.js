@@ -39,17 +39,26 @@ async function startLogic() {
   document.getElementById('logicStatus').textContent = '● 分析中...';
   document.getElementById('logicStatus').style.color = 'var(--warning)';
 
-  logicState.nodes = await AIEngine.analyzeLogic(text);
-  logicState.originalText = text;
-  renderLogicStructure();
-  const warnings = logicState.nodes.filter(n => n.warning).length;
-  document.getElementById('logicCount').textContent = warnings;
-  document.getElementById('btnOptimizeLogic').style.display = 'inline-flex';
-  document.getElementById('btnAcceptLogic').style.display = 'none';
-  btn.disabled = false; btn.textContent = '🔍 分析逻辑';
-  document.getElementById('logicStatus').textContent = '● 完成 ✓';
-  document.getElementById('logicStatus').style.color = 'var(--success)';
-  showToast('分析完成，发现 ' + warnings + ' 处逻辑断层', warnings > 0 ? '' : 'success');
+  try {
+    logicState.nodes = await AIEngine.analyzeLogic(text);
+    logicState.originalText = text;
+    renderLogicStructure();
+    const warnings = logicState.nodes.filter(n => n.warning).length;
+    document.getElementById('logicCount').textContent = warnings;
+    document.getElementById('btnOptimizeLogic').style.display = 'inline-flex';
+    document.getElementById('btnAcceptLogic').style.display = 'none';
+    btn.disabled = false; btn.textContent = '🔍 分析逻辑';
+    document.getElementById('logicStatus').textContent = '● 完成 ✓';
+    document.getElementById('logicStatus').style.color = 'var(--success)';
+    showToast('分析完成，发现 ' + warnings + ' 处逻辑断层', warnings > 0 ? '' : 'success');
+  } catch (err) {
+    btn.disabled = false; btn.textContent = '🔍 分析逻辑';
+    document.getElementById('logicStatus').textContent = '● ' + (err && err.quota ? '额度已用完' : '失败');
+    document.getElementById('logicStatus').style.color = 'var(--danger)';
+    if (err && err.name === 'AbortError') return;
+    if (err && err.quota) { showToast(err.message || '免费额度不足', 'error'); showProUpgrade(); return; }
+    showToast(err.message || '分析失败', 'error');
+  }
 }
 
 function renderLogicStructure() {
@@ -168,15 +177,31 @@ async function optimizeLogic() {
       bodyEl.scrollTop = bodyEl.scrollHeight; // 容器自身可滚时跟随末尾
     }
   };
-  logicState.optimizedText = await AIEngine.optimizeLogic(text, {
-    onDelta: (d) => {
-      streamText += d;
-      if (!rafPending) {
-        rafPending = true;
-        requestAnimationFrame(flushStream);
+  let optimizedText;
+  try {
+    optimizedText = await AIEngine.optimizeLogic(text, {
+      onDelta: (d) => {
+        streamText += d;
+        if (!rafPending) {
+          rafPending = true;
+          requestAnimationFrame(flushStream);
+        }
       }
-    }
-  });
+    });
+  } catch (err) {
+    // 复位按钮/状态，并恢复 textarea 编辑模式（避免卡在空 loading）
+    btn.disabled = false; btn.textContent = '✨ 优化结构';
+    btnAccept.style.display = 'none';
+    document.getElementById('logicStatus').textContent = '● ' + (err && err.quota ? '额度已用完' : '优化失败');
+    document.getElementById('logicStatus').style.color = 'var(--danger)';
+    const le = document.getElementById('logicEditor');
+    if (le && input && !le.contains(input)) { le.innerHTML = ''; le.appendChild(input); }
+    if (err && err.name === 'AbortError') return;
+    if (err && err.quota) { showToast(err.message || '免费额度不足', 'error'); showProUpgrade(); return; }
+    showToast(err.message || '优化失败', 'error');
+    return;
+  }
+  logicState.optimizedText = optimizedText;
 
   // 在编辑器中显示优化结果
   if (editor) {
@@ -218,11 +243,11 @@ async function optimizeLogic() {
   showToast('结构优化完成，请预览后接受', 'success');
 }
 
-function acceptLogicOptimize() {
+async function acceptLogicOptimize() {
   const input = document.getElementById('logicInput');
   if (!input || !logicState.optimizedText) return;
-  // 字数检查
-  if (!checkLocalQuota(logicState.optimizedText.length)) return;
+  // 采纳才计费：接受修改 → 按采纳文本字数计入额度；额度不足则拦截并引导升级 Pro
+  if (!(await adoptQuota(logicState.optimizedText.length))) return;
   input.value = logicState.optimizedText;
   updateWordCount('logicInput', 'logicWordCount');
   document.getElementById('btnAcceptLogic').style.display = 'none';

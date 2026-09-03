@@ -5,7 +5,6 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const quotaMiddleware = require('../middleware/quota');
-const { consumeQuota } = require('../middleware/quota');
 const { apiLimiter } = require('../middleware/rateLimit');
 const { llmRequest } = require('../utils/llm');
 const { resolveProviderInfo } = require('../utils/providerResolver');
@@ -16,7 +15,7 @@ const router = express.Router();
 
 /**
  * POST /api/agent/analyze
- * 全文智能分析 Agent（SSE 流式进度 + 客户端取消 + 按真实 token 计费）
+ * 全文智能分析 Agent（SSE 流式进度 + 客户端取消 + 仅审计真实 token，不按请求计费）
  */
 router.post('/analyze', authMiddleware, quotaMiddleware, apiLimiter, async (req, res) => {
   try {
@@ -61,8 +60,7 @@ router.post('/analyze', authMiddleware, quotaMiddleware, apiLimiter, async (req,
       try {
         const result = await agent.analyze(text, analyzeOpts);
         res.write(`data: ${JSON.stringify({ type: 'complete', result })}\n\n`);
-        consumeQuota(req.user.id, result.totalTokens || text.length);
-        res.end();
+res.end();
       } catch (err) {
         res.write(`data: ${JSON.stringify({ type: 'error', error: err.message })}\n\n`);
         res.end();
@@ -71,8 +69,7 @@ router.post('/analyze', authMiddleware, quotaMiddleware, apiLimiter, async (req,
     }
 
     const result = await agent.analyze(text, analyzeOpts);
-    consumeQuota(req.user.id, result.totalTokens || text.length);
-    res.json(result);
+res.json(result);
   } catch (err) {
     logger.error('Agent 分析失败', { error: err.message, userId: req.user?.id });
     res.status(500).json({ error: err.message });

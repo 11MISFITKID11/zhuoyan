@@ -42,20 +42,29 @@ async function startAIGC() {
   document.getElementById('aigcStatus').style.color = 'var(--warning)';
 
   aigcOriginalText = text;
-  aigcDetectionData = await AIEngine.detectAIGC(text);
-  aigcRewriteHistory = [];
-  renderAIGCReport();
-  renderAIGCParagraphs();
+  try {
+    aigcDetectionData = await AIEngine.detectAIGC(text);
+    aigcRewriteHistory = [];
+    renderAIGCReport();
+    renderAIGCParagraphs();
 
-  // 高亮编辑器中的段落
-  renderAIGCInEditor(aigcDetectionData);
+    // 高亮编辑器中的段落
+    renderAIGCInEditor(aigcDetectionData);
 
-  const highRisk = aigcDetectionData.filter(p => p.aiRate >= 0.5).length;
-  document.getElementById('aigcCount').textContent = aigcDetectionData.length;
-  btn.disabled = false; btn.textContent = '🔬 开始检测';
-  document.getElementById('aigcStatus').textContent = '● 完成 ✓';
-  document.getElementById('aigcStatus').style.color = 'var(--success)';
-  showToast('检测完成，发现 ' + highRisk + ' 处高风险段落', highRisk > 0 ? 'error' : 'success');
+    const highRisk = aigcDetectionData.filter(p => p.aiRate >= 0.5).length;
+    document.getElementById('aigcCount').textContent = aigcDetectionData.length;
+    btn.disabled = false; btn.textContent = '🔬 开始检测';
+    document.getElementById('aigcStatus').textContent = '● 完成 ✓';
+    document.getElementById('aigcStatus').style.color = 'var(--success)';
+    showToast('检测完成，发现 ' + highRisk + ' 处高风险段落', highRisk > 0 ? 'error' : 'success');
+  } catch (err) {
+    btn.disabled = false; btn.textContent = '🔬 开始检测';
+    document.getElementById('aigcStatus').textContent = '● ' + (err && err.quota ? '额度已用完' : '失败');
+    document.getElementById('aigcStatus').style.color = 'var(--danger)';
+    if (err && err.name === 'AbortError') return;
+    if (err && err.quota) { showToast(err.message || '免费额度不足', 'error'); showProUpgrade(); return; }
+    showToast(err.message || '检测失败', 'error');
+  }
 }
 
 function renderAIGCInEditor(data) {
@@ -210,27 +219,37 @@ async function rewriteAIGCPara(i) {
   const para = aigcDetectionData[i];
   // 流式显示改写结果（打字机效果）
   let streamText = '';
-  const rewritten = await AIEngine.rewriteAIGC(para.text, {
-    onDelta: (d) => {
-      streamText += d;
-      textEl.textContent = streamText;
-    }
-  });
+  let rewritten;
+  try {
+    rewritten = await AIEngine.rewriteAIGC(para.text, {
+      onDelta: (d) => {
+        streamText += d;
+        textEl.textContent = streamText;
+      }
+    });
+  } catch (err) {
+    btn.textContent = '🔄 降AI改写';
+    btn.disabled = false;
+    if (err && err.name === 'AbortError') return;
+    if (err && err.quota) { showToast(err.message || '免费额度不足', 'error'); showProUpgrade(); return; }
+    showToast(err.message || '改写失败', 'error');
+    return;
+  }
   textEl.textContent = rewritten;
   btn.style.display = 'none';
   result.classList.add('show');
   showToast('改写完成，AI率已下降', 'success');
 }
 
-function acceptAIGCRewrite(i) {
+async function acceptAIGCRewrite(i) {
   if (!aigcDetectionData || !aigcDetectionData[i]) return;
   const paraData = aigcDetectionData[i];
   const rewriteResult = document.getElementById('rewriteText-' + i);
   if (!rewriteResult) { showToast('请先进行降AI改写', 'error'); return; }
   const rewrittenText = rewriteResult.textContent;
   if (!rewrittenText || rewrittenText === '改写中...') return;
-  // 字数检查
-  if (!checkLocalQuota(rewrittenText.length)) return;
+  // 采纳才计费：接受改写 → 按采纳文本字数计入额度；额度不足则拦截并引导升级 Pro
+  if (!(await adoptQuota(rewrittenText.length))) return;
 
   // 1. 替换编辑器中的段落文本
   const paraDiv = document.getElementById('aigcPara-' + i);
@@ -346,6 +365,8 @@ function undoAIGCRewrite(i) {
 
   // 3. 从历史中移除
   aigcRewriteHistory = aigcRewriteHistory.filter(h => h.paraIdx !== i);
+  // 撤销采纳 → 退回对应采纳字数（额度随实际采纳内容增减）
+  void adoptQuota(-((history.rewrittenText || '').length));
   showToast('已撤销改写，恢复原文', '');
 }
 

@@ -141,7 +141,7 @@ index.js ──► app.js ──► routes/(控制器)
 | 文件 | 用途 | 对应 Java |
 |------|------|----------|
 | `auth.js` | JWT 认证：httpOnly Cookie + Bearer Token 双模式 | Interceptor |
-| `quota.js` | 配额中间件：每日免费字数 + 请求后按真实 token 扣减 | AOP 环绕通知 |
+| `quota.js` | 配额中间件：分析/生成不扣费，仅「采纳 AI 修改」按采纳字数计费（/api/usage/adopt），达上限 429 拦截 | 拦截器 + 计费门面 |
 | `rateLimit.js` | 登录/API 限流（express-rate-limit），防爆破防滥用 | 网关限流 |
 
 **控制器层（routes/，即 Controller）**

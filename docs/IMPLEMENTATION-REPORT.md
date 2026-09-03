@@ -136,7 +136,8 @@ FUNCTION llmJsonCall(systemPrompt, text):
 FUNCTION handlePolish(req):
     systemPrompt ← prompts.POLISH_SYSTEM                  # 模板库取用（不内嵌）
     (parsed, result) ← llmJsonCall(systemPrompt, req.text, temperature=0.2)
-    consumeQuota(userId, result.usage.total_tokens)       # 按真实 token 扣配额
+    # token 仅入 llm_calls 审计；分析/生成不扣用户额度，
+    # 只有用户「采纳修改」时按采纳字数计费（POST /api/usage/adopt，撤销退回）
     RETURN { suggestions: parsed, usage: result.usage }
 ```
 

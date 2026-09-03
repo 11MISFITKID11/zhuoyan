@@ -5,6 +5,7 @@
 const express = require('express');
 const { sqlGet, sqlRun } = require('../db');
 const authMiddleware = require('../middleware/auth');
+const { adjustQuota } = require('../middleware/quota');
 const { decryptApiKey, encryptApiKey, maskApiKey } = require('../utils/crypto');
 const config = require('../config');
 
@@ -46,6 +47,35 @@ router.get('/usage', authMiddleware, (req, res) => {
   const today = new Date().toISOString().split('T')[0];
   const used = (user.usageDate === today) ? (user.usageCount || 0) : 0;
   res.json({ used, limit, date: today, plan: user.plan || 'free', isByok: hasKey });
+});
+
+/**
+ * POST /api/usage/adopt — 采纳/撤销采纳 AI 修改后调整每日额度
+ * 配额语义：分析/生成过程不扣费，只有「接受修改」才按采纳内容的字数计入；
+ * 撤销采纳（undo）传负数退回。免费用户超出每日限额返回 429 → 只能升级 Pro。
+ */
+router.post('/usage/adopt', authMiddleware, (req, res) => {
+  const delta = Math.trunc(Number(req.body && req.body.delta));
+  if (!Number.isFinite(delta) || delta === 0) {
+    return res.status(400).json({ error: '无效的采纳字数' });
+  }
+  const user = sqlGet('SELECT plan, usageDate, usageCount FROM users WHERE id = ?', [req.user.id]);
+  if (!user) return res.status(404).json({ error: '用户不存在' });
+  if (user.plan === 'pro') {
+    const today = new Date().toISOString().split('T')[0];
+    return res.json({
+      ok: true, plan: 'pro', limit: config.proQuota,
+      used: (user.usageDate === today) ? (user.usageCount || 0) : 0
+    });
+  }
+  const r = adjustQuota(req.user.id, delta);
+  if (!r.ok) {
+    return res.status(429).json({
+      error: 'QUOTA_EXCEEDED',
+      message: `今日免费额度不足（每日 ${config.freeQuota.toLocaleString()} 字），请升级 Pro`
+    });
+  }
+  res.json({ ok: true, used: r.used, limit: r.limit, plan: r.plan });
 });
 
 /**

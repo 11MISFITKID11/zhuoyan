@@ -55,17 +55,27 @@ async function startPolish() {
   polishState.text = text;
   polishState.currentText = text;
   polishState.editHistory = [];
-  const suggestions = await AIEngine.polish(text);
-  polishState.suggestions = suggestions;
+  try {
+    const suggestions = await AIEngine.polish(text);
+    polishState.suggestions = suggestions;
 
-  renderPolishDocWithHighlights(text, suggestions);
-  renderPolishSuggestions();
-  document.getElementById('polishCount').textContent = suggestions.length;
-  document.getElementById('btnAcceptAll').style.display = suggestions.length > 0 ? 'inline-flex' : 'none';
-  btn.disabled = false; btn.textContent = '✨ 开始润色';
-  document.getElementById('polishStatus').textContent = '● 完成 ✓';
-  document.getElementById('polishStatus').style.color = 'var(--success)';
-  showToast('润色完成，发现 ' + suggestions.length + ' 条建议', 'success');
+    renderPolishDocWithHighlights(text, suggestions);
+    renderPolishSuggestions();
+    document.getElementById('polishCount').textContent = suggestions.length;
+    document.getElementById('btnAcceptAll').style.display = suggestions.length > 0 ? 'inline-flex' : 'none';
+    btn.disabled = false; btn.textContent = '✨ 开始润色';
+    document.getElementById('polishStatus').textContent = '● 完成 ✓';
+    document.getElementById('polishStatus').style.color = 'var(--success)';
+    showToast('润色完成，发现 ' + suggestions.length + ' 条建议', 'success');
+  } catch (err) {
+    // 复位按钮与状态，避免卡在 loading
+    btn.disabled = false; btn.textContent = '✨ 开始润色';
+    document.getElementById('polishStatus').textContent = '● ' + (err && err.quota ? '额度已用完' : '失败');
+    document.getElementById('polishStatus').style.color = 'var(--danger)';
+    if (err && err.name === 'AbortError') return;
+    if (err && err.quota) { showToast(err.message || '免费额度不足', 'error'); showProUpgrade(); return; }
+    showToast(err.message || '润色失败', 'error');
+  }
 }
 
 function renderPolishDocWithHighlights(text, suggestions) {
@@ -182,31 +192,28 @@ function scrollToHighlight(id) {
   }
 }
 
-// 后端配额缓存（由 loadUsage 刷新）。前端不再本地累加，避免与后端双重计数、显示不一致
+// 后端额度缓存（由 refreshQuota / adoptQuota 从 /api/usage 刷新，页面加载与采纳成功后同步）
+// 额度口径：仅在「采纳 AI 修改」时按采纳内容的字数累计（adoptQuota）；
+// 分析/生成过程不计费 —— 不做修改则额度不变，接受修改才增加字数；
+// 已达上限时由入口预检与后端 429 兜底，只能升级 Pro 解锁。
 let quotaCache = { used: 0, limit: 3000, plan: 'free' };
 
-// 前端额度校验：仅做「乐观检查」，真正的扣减与超限拦截由后端 quotaMiddleware 完成
-function checkLocalQuota(words) {
-  if (quotaCache.plan === 'pro') return true;
+// 升级引导：额度不足时统一由此抛出 quota 错误，由各页面 catch 复位 UI 并弹出升级框
+function makeQuotaError() {
   const limit = quotaCache.limit || 3000;
-  if (quotaCache.used + words > limit) {
-    showToast('免费额度不足（每日 ' + limit.toLocaleString() + ' 字），请升级 Pro 获取无限额度', 'error');
-    showProUpgrade();
-    return false;
-  }
-  return true;
+  const err = new Error('今日可采纳字数已达上限（每日 ' + limit.toLocaleString() + ' 字），请升级 Pro 获取无限额度');
+  err.quota = true;
+  return err;
 }
 
-function acceptSuggestion(id) {
+async function acceptSuggestion(id) {
   const suggestion = polishState.suggestions.find(s => s.id === id);
   if (!suggestion) return;
 
-  // 字数检查（按建议新增字数计算）
-  const addedWords = Math.max(suggestion.new.length - (suggestion.old ? suggestion.old.length : 0), suggestion.new.length);
-  if (!checkLocalQuota(addedWords)) return;
-
+  // 采纳才计费：接受修改 → 按采纳内容字数计入额度；额度不足则拦截并引导升级 Pro
   const mark = document.querySelector('mark.hl[data-sid="' + id + '"]');
   if (!mark) { showToast('该建议已被处理', 'error'); return; }
+  if (!(await adoptQuota(suggestion.new.length))) return;
 
   const span = document.createElement('span');
   span.className = 'accepted-replacement';
@@ -295,18 +302,30 @@ function undoSuggestion(id) {
 
   polishState.editHistory = polishState.editHistory.filter(h => h.id !== id);
   polishState.acceptedCount--;
+  // 撤销采纳 → 退回对应采纳字数（额度随实际采纳内容增减）
+  void adoptQuota(-suggestion.new.length);
   showToast('已撤销修改', '');
   updatePolishCount();
   updateStats();
 }
 
-function acceptAllPolish() {
+async function acceptAllPolish() {
   const pending = polishState.suggestions.filter(s => {
     const mark = document.querySelector('mark.hl[data-sid="' + s.id + '"]');
     return mark && !mark.classList.contains('accepted') && !mark.classList.contains('dismissed');
   });
   if (pending.length === 0) { showToast('没有待处理的建议', ''); return; }
-  pending.forEach(s => acceptSuggestion(s.id));
+  // 采纳才计费：先做一次总量预检，避免逐条采纳到一半被拦截
+  const total = pending.reduce((sum, s) => sum + (s.new || '').length, 0);
+  if (getToken() && quotaCache.plan !== 'pro' && (quotaCache.used || 0) + total > (quotaCache.limit || 3000)) {
+    showToast('今日可采纳字数不足（每日 ' + (quotaCache.limit || 3000).toLocaleString() + ' 字），请升级 Pro', 'error');
+    showProUpgrade();
+    return;
+  }
+  for (const s of pending) {
+    const m = document.querySelector('mark.hl[data-sid="' + s.id + '"]');
+    if (m && !m.classList.contains('dismissed')) await acceptSuggestion(s.id);
+  }
   showToast('已接受全部 ' + pending.length + ' 条建议', 'success');
 }
 
